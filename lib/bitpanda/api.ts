@@ -1,10 +1,10 @@
-const API_BASE = "https://api.public.bitpanda.com";
+const API_BASE = "https://api.public.bitpanda.com/v1";
 
-type Page<T> = { data?: T[]; cursor?: string };
+type Page<T> = { data?: T[]; cursor?: string; next_cursor?: string; has_next_page?: boolean };
 type CurrencyResponse = BitpandaAsset[] | { data?: BitpandaAsset[] };
 
 export type BitpandaAsset = { id: string; symbol?: string; name?: string; isin?: string; type?: string; group?: string };
-export type BitpandaHolding = { assetId: string; quantity: string; value: string; equivalentCurrencyId?: string };
+export type BitpandaHolding = { assetId?: string; asset_id?: string; quantity?: string; value?: string; balance?: { value?: string }; equivalentCurrencyId?: string };
 export type BitpandaOperationTransaction = { transaction_id?: string; transactionId?: string; asset_id?: string; assetId?: string; currency_id?: string; currencyId?: string; wallet_id?: string; walletId?: string; asset_amount?: { value?: string }; amount?: string; fee_amount?: { value?: string; asset_id?: string; currency_id?: string }; transaction_type?: string; transactionType?: string; flow?: string; credited_at?: string; timestamp?: string; asset_balance_after?: { value?: string }; trade?: { rate?: string; rate_with_fee?: string; to_eur_rate?: string } };
 export type BitpandaOperation = { operation_id?: string; operationId?: string; operation_type?: string; operationType?: string; timestamp?: string; transactions?: BitpandaOperationTransaction[]; assetId?: string; amount?: string };
 
@@ -25,11 +25,11 @@ async function paginated<T>(path: string, apiKey: string, extra?: Record<string,
   const rows: T[] = [];
   let cursor: string | undefined;
   do {
-    const page = await request<Page<T>>(path, apiKey, { ...extra, pageSize: 500, cursor });
+    const page = await request<Page<T>>(path, apiKey, { ...extra, page_size: 500, cursor });
     const data = page.data || [];
     rows.push(...data);
-    cursor = page.cursor || undefined;
-    if (!cursor || !data.length) break;
+    cursor = page.next_cursor || page.cursor || undefined;
+    if (!cursor || !data.length || page.has_next_page === false) break;
   } while (rows.length < limit);
   return rows;
 }
@@ -58,7 +58,7 @@ export async function listCurrencies(apiKey: string, ids?: string[]) {
 
 export const bitpandaApi = {
   portfolio: (apiKey: string) => request<BitpandaHolding[] | { data?: BitpandaHolding[] }>("/portfolio/holdings", apiKey),
-  portfolioHistory: (apiKey: string, timeframe: "DAY" | "WEEK" | "MONTH" | "SIX_MONTH" | "YEAR" = "YEAR") => request<any>("/portfolio/history", apiKey, { timeframe }),
+  portfolioHistory: (apiKey: string, timeframe: "DAY" | "WEEK" | "MONTH" | "SIX_MONTH" | "YEAR" = "YEAR") => request<any>("/portfolio-history", apiKey, { timeframe }),
   operations: (apiKey: string) => paginated<BitpandaOperation>("/operations", apiKey),
   assets: (apiKey: string, ids?: string[]) => listAssets(apiKey, ids),
   currencies: (apiKey: string, ids?: string[]) => listCurrencies(apiKey, ids),
