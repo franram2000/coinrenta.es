@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "register";
@@ -29,7 +29,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         password,
         options: {
           data: { display_name: displayName.trim() || null },
-          emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
+          emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
         },
       });
 
