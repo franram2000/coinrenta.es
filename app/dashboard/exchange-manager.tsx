@@ -21,27 +21,20 @@ export default function ExchangeManager({ exchanges }: Props) {
     if (isPending) return;
     setOpen(false);
     setSelected(null);
-    setMessage(null);
-    setError(null);
-  }
-
-  function closeAfterConnectionCreated() {
-    setOpen(false);
-    setSelected(null);
   }
 
   function submitApi(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("Creando la conexión con Bitpanda…");
-    setError(null);
     const formData = new FormData(event.currentTarget);
+    setError(null);
+    setMessage("Conexión creada. Sincronizando Bitpanda…");
+    setOpen(false);
+    setSelected(null);
+
     startTransition(async () => {
       try {
         const result = await addBitpandaApiConnection(formData);
-        closeAfterConnectionCreated();
-        setMessage("Conexión creada. Sincronizando tus movimientos…");
         router.refresh();
-
         await syncBitpandaConnection(result.connectionId);
         router.refresh();
         setMessage("✓ Bitpanda conectado y sincronizado correctamente.");
@@ -56,22 +49,22 @@ export default function ExchangeManager({ exchanges }: Props) {
 
   function submitCsv(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("Importando el histórico de Bitpanda…");
-    setError(null);
     const formData = new FormData(event.currentTarget);
+    setError(null);
+    setMessage("Importación iniciada. Procesando el histórico…");
+    setOpen(false);
+    setSelected(null);
+
     startTransition(async () => {
       try {
         await addExchangeConnection(formData);
         router.refresh();
-        setMessage("✓ Conexión añadida correctamente.");
-        window.setTimeout(() => {
-          setOpen(false);
-          setSelected(null);
-          setMessage(null);
-        }, 1200);
+        setMessage("✓ Histórico de Bitpanda importado correctamente.");
+        window.setTimeout(() => setMessage(null), 1800);
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo importar el CSV.");
         setMessage(null);
+        router.refresh();
       }
     });
   }
@@ -88,6 +81,7 @@ export default function ExchangeManager({ exchanges }: Props) {
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo resincronizar.");
         setMessage(null);
+        router.refresh();
       }
     });
   }
@@ -97,13 +91,13 @@ export default function ExchangeManager({ exchanges }: Props) {
       <button className="btn btn-outline exchange-action" type="button" onClick={resync} disabled={isPending}>
         <span className={isPending ? "connection-spinner" : ""}>↻</span>{isPending ? "Trabajando…" : "Resincronizar"}
       </button>
-      <button className="btn btn-primary exchange-action" type="button" onClick={() => { setOpen(true); setError(null); setMessage(null); }} disabled={isPending}>
+      <button className="btn btn-primary exchange-action" type="button" onClick={() => { setOpen(true); setSelected(null); setError(null); setMessage(null); }} disabled={isPending}>
         <span>＋</span>Añadir conexión
       </button>
     </div>
 
-    {(message || error) && <div className={`connection-action-feedback ${error ? "is-error" : ""}`} role="status" aria-live="polite">
-      {!error && <span className="connection-feedback-spinner" />}
+    {(message || error) && <div className={`connection-action-feedback ${error ? "is-error" : message?.startsWith("✓") ? "is-success" : ""}`} role="status" aria-live="polite">
+      {!error && !message?.startsWith("✓") && <span className="connection-feedback-spinner" />}
       <span>{error || message}</span>
     </div>}
 
