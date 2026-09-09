@@ -13,18 +13,72 @@ export async function addExchangeConnection(formData: FormData) {
   const exchangeId = String(formData.get("exchange_id") || "");
   const label = String(formData.get("label") || "").trim() || null;
   const apiKey = String(formData.get("api_key") || "").trim();
+  const providerType = String(formData.get("provider_type") || "api").toLowerCase();
   if (!exchangeId) return;
   const { data: exchange } = await supabase.from("exchanges").select("code,name").eq("id", exchangeId).eq("is_active", true).maybeSingle();
-  const { data: connection, error } = await supabase.from("exchange_connections").insert({ user_id: user.id, exchange_id: exchangeId, label, status: apiKey ? "pending" : "pending", provider_type: "api" }).select("id").single();
+  if (!exchange) throw new Error("Exchange no encontrado.");
+  const code = exchange.code.toLowerCase();
+  if (providerType === "api" && code !== "bitpanda") throw new Error("La conexión por API todavía no está disponible para este exchange.");
+  if (providerType === "csv" && code !== "bitpanda") throw new Error("La importación CSV todavía no está disponible para este exchange.");
+  if (providerType === "api" && !apiKey) throw new Error("Introduce una clave API.");
+  const file = formData.get("file");
+  if (providerType === "csv" && (!(file instanceof File) || !file.size)) throw new Error("Selecciona un CSV.");
+
+  const { data: connection, error } = await supabase.from("exchange_connections").insert({ user_id: user.id, exchange_id: exchangeId, label, status: "pending", provider_type: providerType }).select("id").single();
   if (error || !connection) throw new Error(error?.message || "No se pudo crear la conexión");
-  const { data: account, error: accountError } = await supabase.from("accounts").insert({ user_id: user.id, connection_id: connection.id, account_type: "exchange", name: label || exchange?.name || "Nueva cuenta", is_active: true }).select("id").single();
+  const { data: account, error: accountError } = await supabase.from("accounts").insert({ user_id: user.id, connection_id: connection.id, account_type: "exchange", name: label || exchange.name || "Nueva cuenta", is_active: true }).select("id").single();
   if (accountError || !account) throw new Error(accountError?.message || "No se pudo crear la cuenta");
-  if (apiKey) {
-    if ((exchange?.code || "").toLowerCase() !== "bitpanda") throw new Error("La clave API solo está habilitada actualmente para Bitpanda.");
+
+  if (providerType === "api") {
     const { error: secretError } = await supabase.rpc("store_exchange_api_key", { p_connection_id: connection.id, p_api_key: apiKey });
     if (secretError) throw new Error(`No se pudo guardar la clave API: ${secretError.message}`);
+  } else {
+    const csvForm = new FormData();
+    csvForm.set("file", file as File);
+    csvForm.set("account_id", account.id);
+    await importBitpandaCsv(csvForm);
   }
   revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges");
+}
+
+export async function resyncAllExchanges() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id,connection_id").eq("user_id", user.id);
+  if (accountsError) throw new Error(accountsError.message);
+  const accountIds = (accounts || []).map((account) => account.id);
+  if (accountIds.length) {
+    const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", user.id).in("account_id", accountIds);
+    if (deleteError) throw new Error(`No se pudieron borrar los movimientos: ${deleteError.message}`);
+  }
+
+  const connectionIds = [...new Set((accounts || []).map((account) => account.connection_id).filter(Boolean))] as string[];
+  if (!connectionIds.length) {
+    revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos");
+    return;
+  }
+  const { data: connections, error: connectionsError } = await supabase.from("exchange_connections").select("id,exchange_id,status,exchanges(code)").eq("user_id", user.id).in("id", connectionIds);
+  if (connectionsError) throw new Error(connectionsError.message);
+
+  for (const connection of connections || []) {
+    const exchange = Array.isArray(connection.exchanges) ? connection.exchanges[0] : connection.exchanges;
+    if ((exchange?.code || "").toLowerCase() !== "bitpanda") continue;
+    const account = (accounts || []).find((item) => item.connection_id === connection.id);
+    if (!account) continue;
+    const { data: apiKey, error: keyError } = await supabase.rpc("get_exchange_api_key", { p_connection_id: connection.id });
+    if (keyError || !apiKey) continue;
+    try {
+      await supabase.from("exchange_connections").update({ status: "pending", last_sync_status: "pending", last_sync_error: null, updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
+      await syncBitpanda({ supabase, userId: user.id, connectionId: connection.id, accountId: account.id, apiKey });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error desconocido";
+      await supabase.from("exchange_connections").update({ status: "error", last_sync_status: "error", last_sync_error: message, updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
+    }
+  }
+
+  revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos"); revalidatePath("/dashboard/fiscalidad");
 }
 
 export async function syncBitpandaConnection(formData: FormData) {
