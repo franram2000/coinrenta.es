@@ -3,7 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addExchangeConnection, resyncAllExchanges } from "./actions";
-import { addBitpandaApiConnection } from "./connection-actions";
+import { addBitpandaApiConnection, syncBitpandaConnection } from "./connection-actions";
 
 type Exchange = { id: string; code: string; name: string; website: string | null };
 type Props = { exchanges: Exchange[]; connections: unknown[] };
@@ -25,24 +25,31 @@ export default function ExchangeManager({ exchanges }: Props) {
     setError(null);
   }
 
+  function closeAfterConnectionCreated() {
+    setOpen(false);
+    setSelected(null);
+  }
+
   function submitApi(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage("Conectando con Bitpanda y sincronizando tus movimientos…");
+    setMessage("Creando la conexión con Bitpanda…");
     setError(null);
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       try {
-        await addBitpandaApiConnection(formData);
+        const result = await addBitpandaApiConnection(formData);
+        closeAfterConnectionCreated();
+        setMessage("Conexión creada. Sincronizando tus movimientos…");
         router.refresh();
-        setMessage("✓ Conexión añadida y sincronizada correctamente.");
-        window.setTimeout(() => {
-          setOpen(false);
-          setSelected(null);
-          setMessage(null);
-        }, 1200);
+
+        await syncBitpandaConnection(result.connectionId);
+        router.refresh();
+        setMessage("✓ Bitpanda conectado y sincronizado correctamente.");
+        window.setTimeout(() => setMessage(null), 1800);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo crear la conexión.");
+        setError(err instanceof Error ? err.message : "No se pudo crear o sincronizar la conexión.");
         setMessage(null);
+        router.refresh();
       }
     });
   }
