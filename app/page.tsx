@@ -15,7 +15,7 @@ const features = [
 
 export default async function Home() {
   const supabase = await createClient();
-  const { data: { claims } } = await supabase.auth.getClaims();
+  const { data: claims } = await supabase.auth.getClaims();
   if (claims?.sub) redirect("/dashboard");
 
   return (
