@@ -6,6 +6,7 @@ import "./help.css";
 import "./bitpanda.css";
 import "./connections.css";
 import "./fiscality.css";
+import "./renta/renta.css";
 import "./summary.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
