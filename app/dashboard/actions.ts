@@ -57,8 +57,6 @@ export async function deleteExchangeConnection(formData: FormData) {
   if (connectionError) throw new Error(connectionError.message);
   if (!connection) throw new Error("Conexión no encontrada.");
 
-  // Remove dependent data explicitly so the connection can be deleted even if
-  // the database schema does not cascade every relationship.
   const { data: accounts, error: accountsError } = await supabase
     .from("accounts")
     .select("id")
@@ -68,39 +66,17 @@ export async function deleteExchangeConnection(formData: FormData) {
 
   const accountIds = (accounts || []).map((account) => account.id);
   if (accountIds.length) {
-    const { error: transactionsError } = await supabase
-      .from("transactions")
-      .delete()
-      .eq("user_id", user.id)
-      .in("account_id", accountIds);
+    const { error: transactionsError } = await supabase.from("transactions").delete().eq("user_id", user.id).in("account_id", accountIds);
     if (transactionsError) throw new Error(`No se pudieron borrar los movimientos: ${transactionsError.message}`);
-
-    const { error: accountsDeleteError } = await supabase
-      .from("accounts")
-      .delete()
-      .eq("user_id", user.id)
-      .in("id", accountIds);
+    const { error: accountsDeleteError } = await supabase.from("accounts").delete().eq("user_id", user.id).in("id", accountIds);
     if (accountsDeleteError) throw new Error(`No se pudo borrar la cuenta: ${accountsDeleteError.message}`);
   }
-
-  const { error: secretError } = await supabase
-    .from("exchange_connection_secrets")
-    .delete()
-    .eq("connection_id", connectionId)
-    .eq("user_id", user.id);
+  const { error: secretError } = await supabase.from("exchange_connection_secrets").delete().eq("connection_id", connectionId).eq("user_id", user.id);
   if (secretError) throw new Error(`No se pudo borrar la referencia de credenciales: ${secretError.message}`);
-
-  const { error: deleteError } = await supabase
-    .from("exchange_connections")
-    .delete()
-    .eq("id", connectionId)
-    .eq("user_id", user.id);
+  const { error: deleteError } = await supabase.from("exchange_connections").delete().eq("id", connectionId).eq("user_id", user.id);
   if (deleteError) throw new Error(`No se pudo borrar la conexión: ${deleteError.message}`);
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/exchanges");
-  revalidatePath("/dashboard/movimientos");
-  revalidatePath("/dashboard/fiscalidad");
+  revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos"); revalidatePath("/dashboard/fiscalidad");
 }
 
 export async function resyncAllExchanges() {
@@ -119,7 +95,6 @@ export async function resyncAllExchanges() {
     const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", user.id).in("account_id", apiAccountIds);
     if (deleteError) throw new Error(`No se pudieron borrar los movimientos: ${deleteError.message}`);
   }
-
   const connectionIds = [...new Set(apiAccounts.map((account) => account.connection_id).filter(Boolean))] as string[];
   if (!connectionIds.length) {
     revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos");
@@ -127,23 +102,24 @@ export async function resyncAllExchanges() {
   }
   const { data: connections, error: connectionsError } = await supabase.from("exchange_connections").select("id,exchange_id,status,exchanges(code)").eq("user_id", user.id).in("id", connectionIds);
   if (connectionsError) throw new Error(connectionsError.message);
-
   for (const connection of connections || []) {
     const exchange = Array.isArray(connection.exchanges) ? connection.exchanges[0] : connection.exchanges;
     if ((exchange?.code || "").toLowerCase() !== "bitpanda") continue;
     const account = apiAccounts.find((item) => item.connection_id === connection.id);
     if (!account) continue;
     const { data: apiKey, error: keyError } = await supabase.rpc("get_exchange_api_key", { p_connection_id: connection.id });
-    if (keyError || !apiKey) continue;
+    if (keyError || !apiKey) {
+      await supabase.from("exchange_connections").update({ status: "error", last_sync_status: "error", last_sync_error: keyError?.message || "No hay una clave API guardada.", updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
+      continue;
+    }
     try {
-      await supabase.from("exchange_connections").update({ status: "pending", last_sync_status: "pending", last_sync_error: null, updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
+      await supabase.from("exchange_connections").update({ status: "pending", last_sync_status: null, last_sync_error: null, updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
       await syncBitpanda({ supabase, userId: user.id, connectionId: connection.id, accountId: account.id, apiKey });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
       await supabase.from("exchange_connections").update({ status: "error", last_sync_status: "error", last_sync_error: message, updated_at: new Date().toISOString() }).eq("id", connection.id).eq("user_id", user.id);
     }
   }
-
   revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos"); revalidatePath("/dashboard/fiscalidad");
 }
 
@@ -193,12 +169,15 @@ export async function importBitpandaCsv(formData: FormData) {
     const {data:existing}=await supabase.from("assets").select("id,symbol").in("symbol",symbols);
     const ids=new Map<string,string>((existing||[]).map((a:any)=>[a.symbol,a.id]));
     for(const symbol of symbols){ if(ids.has(symbol)) continue; const fiat=["EUR","USD","GBP","CHF","PLN","SEK","DKK","NOK"].includes(symbol); const {data,error}=await supabase.from("assets").insert({symbol,name:symbol,asset_type:fiat?"fiat":"crypto"}).select("id").single(); if(error) throw new Error(`No se pudo crear el activo ${symbol}: ${error.message}`); ids.set(symbol,data.id); }
-    const transactions=rows.map(r=>({user_id:user.id,account_id:accountId,import_id:importRow.id,external_id:r.externalId,occurred_at:r.occurredAt,transaction_type:r.transactionType,base_asset_id:ids.get(r.asset)||null,base_amount:r.amountAsset??(r.amountFiat??null),quote_asset_id:r.amountAsset!==null?ids.get(r.fiat)||null:null,quote_amount:r.amountAsset!==null?r.amountFiat:null,fee_asset_id:r.feeAsset?ids.get(r.feeAsset)||null:null,fee_amount:r.feeAmount,price:r.price,price_currency:r.priceCurrency,raw_data:r.raw,source:"csv:bitpanda"}));
+    const transactions=rows.map(r=>({user_id:user.id,account_id:accountId,import_id:importRow.id,external_id:r.externalId,occurred_at:r.occurredAt,transaction_type:r.transactionType,base_asset_id:ids.get(r.asset)||null,base_amount:r.amountAsset??(r.amountFiat??null),quote_asset_id:r.amountAsset!==null?ids.get(r.fiat)||null:null,quote_amount:r.amountAsset!==null?r.amountFiat:null,fee_asset_id:r.feeAsset?ids.get(r.feeAsset)||null:null,fee_amount:r.feeAmount,price:r.price,price_currency:r.priceCurrency,raw_data:r.raw,source:"csv"}));
     for(let i=0;i<transactions.length;i+=250){const {error}=await supabase.from("transactions").upsert(transactions.slice(i,i+250),{onConflict:"account_id,external_id"});if(error)throw new Error(`Error guardando CSV: ${error.message}`);}
-    await supabase.from("imports").update({status:"completed",rows_processed:transactions.length,rows_failed:0,imported_at:new Date().toISOString(),error_message:null}).eq("id",importRow.id).eq("user_id",user.id);
+    const now=new Date().toISOString();
+    await supabase.from("imports").update({status:"completed",rows_processed:transactions.length,rows_failed:0,imported_at:now,error_message:null}).eq("id",importRow.id).eq("user_id",user.id);
+    await supabase.from("exchange_connections").update({status:"active",last_sync_at:now,last_sync_status:"success",last_sync_error:null,updated_at:now}).eq("id",connection?.id).eq("user_id",user.id);
   } catch(error) {
     const message=error instanceof Error?error.message:"Error procesando CSV";
     await supabase.from("imports").update({status:"failed",rows_failed:rows.length,error_message:message}).eq("id",importRow.id).eq("user_id",user.id);
+    await supabase.from("exchange_connections").update({status:"error",last_sync_status:"error",last_sync_error:message,updated_at:new Date().toISOString()}).eq("id",connection?.id).eq("user_id",user.id);
     throw new Error(message);
   }
   revalidatePath("/dashboard"); revalidatePath("/dashboard/importar"); revalidatePath("/dashboard/movimientos");
