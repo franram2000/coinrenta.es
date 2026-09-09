@@ -41,6 +41,68 @@ export async function addExchangeConnection(formData: FormData) {
   revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges");
 }
 
+export async function deleteExchangeConnection(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const connectionId = String(formData.get("connection_id") || "").trim();
+  if (!connectionId) return;
+
+  const { data: connection, error: connectionError } = await supabase
+    .from("exchange_connections")
+    .select("id, api_secret_id")
+    .eq("id", connectionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (connectionError) throw new Error(connectionError.message);
+  if (!connection) throw new Error("Conexión no encontrada.");
+
+  // Remove dependent data explicitly so the connection can be deleted even if
+  // the database schema does not cascade every relationship.
+  const { data: accounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("connection_id", connectionId)
+    .eq("user_id", user.id);
+  if (accountsError) throw new Error(accountsError.message);
+
+  const accountIds = (accounts || []).map((account) => account.id);
+  if (accountIds.length) {
+    const { error: transactionsError } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("user_id", user.id)
+      .in("account_id", accountIds);
+    if (transactionsError) throw new Error(`No se pudieron borrar los movimientos: ${transactionsError.message}`);
+
+    const { error: accountsDeleteError } = await supabase
+      .from("accounts")
+      .delete()
+      .eq("user_id", user.id)
+      .in("id", accountIds);
+    if (accountsDeleteError) throw new Error(`No se pudo borrar la cuenta: ${accountsDeleteError.message}`);
+  }
+
+  const { error: secretError } = await supabase
+    .from("exchange_connection_secrets")
+    .delete()
+    .eq("connection_id", connectionId)
+    .eq("user_id", user.id);
+  if (secretError) throw new Error(`No se pudo borrar la referencia de credenciales: ${secretError.message}`);
+
+  const { error: deleteError } = await supabase
+    .from("exchange_connections")
+    .delete()
+    .eq("id", connectionId)
+    .eq("user_id", user.id);
+  if (deleteError) throw new Error(`No se pudo borrar la conexión: ${deleteError.message}`);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/exchanges");
+  revalidatePath("/dashboard/movimientos");
+  revalidatePath("/dashboard/fiscalidad");
+}
+
 export async function resyncAllExchanges() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
