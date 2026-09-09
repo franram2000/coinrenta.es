@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +14,17 @@ const features = [
   ["✓", "Revisa antes de presentar", "Consulta el estado de tus datos antes de utilizarlos en tu declaración."],
 ];
 
+function BrandLogo({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className="brand">
+      <span className="brand-mark" aria-hidden="true">
+        <Image src="/logo.png" alt="" width={44} height={44} priority />
+      </span>
+      {!compact && <span className="brand-name">Coin<span>Renta</span></span>}
+    </span>
+  );
+}
+
 export default async function Home() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -22,9 +34,7 @@ export default async function Home() {
     <>
       <header className="site-header">
         <nav className="container nav" aria-label="Navegación principal">
-          <Link href="/" aria-label="CoinRenta, inicio">
-            <span className="brand"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></span>
-          </Link>
+          <Link href="/" aria-label="CoinRenta, inicio"><BrandLogo /></Link>
           <div className="nav-links">
             <a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a>
           </div>
@@ -53,7 +63,7 @@ export default async function Home() {
             </div>
             <div className="dashboard-wrap" aria-label="Vista previa del dashboard de CoinRenta">
               <div className="dashboard">
-                <div className="dashboard-top"><div className="dash-brand"><span className="dash-brand-mark">₿</span> CoinRenta</div><div className="dash-pill">Ejercicio 2025</div></div>
+                <div className="dashboard-top"><div className="dash-brand"><span className="dash-brand-mark"><Image src="/logo.png" alt="" width={25} height={25} /></span> CoinRenta</div><div className="dash-pill">Ejercicio 2025</div></div>
                 <div className="dashboard-body"><div className="dash-grid">
                   <div className="dash-card"><div className="dash-label">Resultado fiscal</div><div className="dash-value">+2.418,63 €</div><div className="dash-meta">↑ +18,4% frente al coste</div><div className="chart" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <span className="bar" key={i} style={{ height: `${35 + i * 6}%` }} />)}</div></div>
                   <div className="dash-card"><div className="dash-label">Activos</div><div className="asset-list">{[["BTC", "Bitcoin", "12.840 €"], ["ETH", "Ethereum", "4.390 €"], ["USD", "USDC", "2.171 €"]].map(([symbol, name, value]) => <div className="asset" key={symbol}><div className="asset-main"><span className="asset-icon">{symbol}</span><div><div className="asset-name">{name}</div><div className="asset-symbol">Cuenta consolidada</div></div></div><div><div className="asset-value">{value}</div><div className="asset-change">+8,2%</div></div></div>)}</div></div>
@@ -68,7 +78,7 @@ export default async function Home() {
         <section className="section" id="faq" aria-labelledby="faq-title"><div className="container"><div className="section-head center"><div className="section-kicker">Preguntas frecuentes</div><h2 id="faq-title">Antes de empezar</h2></div><div className="faq-grid"><details className="faq-item"><summary>¿Tengo que conectar mis exchanges?</summary><p>No. Puedes usar APIs de solo lectura cuando estén disponibles o importar CSV manualmente.</p></details><details className="faq-item"><summary>¿Puedo usar varios exchanges?</summary><p>Sí. El modelo está diseñado para centralizar varias cuentas y fuentes de datos.</p></details><details className="faq-item"><summary>¿Necesito tener todos los datos desde el primer día?</summary><p>No. Puedes crear la cuenta y añadir fuentes de información progresivamente.</p></details><details className="faq-item"><summary>¿CoinRenta sustituye a un asesor fiscal?</summary><p>No. Es una herramienta de organización y cálculo; la revisión final de tu situación corresponde al usuario y, cuando proceda, a un profesional.</p></details></div></div></section>
         <section className="section"><div className="container"><div className="cta"><div className="section-kicker">Tu espacio ya te está esperando</div><h2>Empieza con CoinRenta.</h2><p>Cuenta privada, dashboard y todas tus fuentes de datos en un solo lugar.</p><div className="hero-actions" style={{ justifyContent: "center" }}><Link className="btn btn-primary btn-large" href="/registro">Crear mi cuenta →</Link><Link className="btn btn-secondary btn-large" href="/login">Iniciar sesión</Link></div></div></div></section>
       </main>
-      <footer className="site-footer"><div className="container footer-row"><div><span className="brand"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></span><span> · © {new Date().getFullYear()} CoinRenta</span></div><div className="footer-links"><Link href="/login">Acceso</Link><Link href="/registro">Registro</Link><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a></div></div></footer>
+      <footer className="site-footer"><div className="container footer-row"><div><BrandLogo /><span> · © {new Date().getFullYear()} CoinRenta</span></div><div className="footer-links"><Link href="/login">Acceso</Link><Link href="/registro">Registro</Link><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a></div></div></footer>
     </>
   );
 }
