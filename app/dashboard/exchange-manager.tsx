@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { addExchangeConnection, resyncAllExchanges } from "./actions";
 import { addBitpandaApiConnection } from "./connection-actions";
@@ -25,20 +25,7 @@ export default function ExchangeManager({ exchanges }: Props) {
     setError(null);
   }
 
-  function refreshAfterSuccess(text: string) {
-    setMessage(text);
-    setError(null);
-    startTransition(() => {
-      router.refresh();
-    });
-    window.setTimeout(() => {
-      setOpen(false);
-      setSelected(null);
-      setMessage(null);
-    }, 1100);
-  }
-
-  function submitApi(event: React.FormEvent<HTMLFormElement>) {
+  function submitApi(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Conectando con Bitpanda y sincronizando tus movimientos…");
     setError(null);
@@ -60,7 +47,7 @@ export default function ExchangeManager({ exchanges }: Props) {
     });
   }
 
-  function submitCsv(event: React.FormEvent<HTMLFormElement>) {
+  function submitCsv(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Importando el histórico de Bitpanda…");
     setError(null);
@@ -108,7 +95,7 @@ export default function ExchangeManager({ exchanges }: Props) {
       </button>
     </div>
 
-    {(message || error) && <div className={`connection-action-feedback ${error ? "is-error" : ""}`} role="status">
+    {(message || error) && <div className={`connection-action-feedback ${error ? "is-error" : ""}`} role="status" aria-live="polite">
       {!error && <span className="connection-feedback-spinner" />}
       <span>{error || message}</span>
     </div>}
