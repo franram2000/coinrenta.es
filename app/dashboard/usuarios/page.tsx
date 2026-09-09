@@ -1,0 +1,16 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { adminUpdateUser } from "../actions";
+
+export const dynamic = "force-dynamic";
+
+export default async function UsersPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  if (me?.role !== "admin") redirect("/dashboard");
+  const { data: users } = await supabase.from("profiles").select("id,email,display_name,role,is_active,created_at,updated_at").order("created_at", { ascending: false });
+
+  return <div className="app-shell"><aside className="app-sidebar"><a className="app-logo" href="/dashboard"><span className="brand-mark">C</span><span className="brand-name">Coin<span>Renta</span></span></a><nav className="app-nav"><a className="app-nav-item" href="/dashboard">▦ Resumen</a><a className="app-nav-item active" href="/dashboard/usuarios">♙ Usuarios</a><a className="app-nav-item" href="/dashboard/configuracion">⚙ Configuración</a></nav></aside><main className="app-main"><header className="app-topbar"><div><span className="topbar-kicker">Administración</span><h1>Usuarios</h1><p>Gestiona altas, bajas y planes de CoinRenta.</p></div></header><section className="dashboard-content"><div className="panel-card"><div className="panel-head"><div><span className="section-kicker">Control de usuarios</span><h3>{users?.length || 0} cuentas</h3></div><span className="status-pill">Admin</span></div><div className="table-wrap"><table><thead><tr><th>Usuario</th><th>Plan</th><th>Estado</th><th>Alta</th><th>Acciones</th></tr></thead><tbody>{users?.map((item)=><tr key={item.id}><td><strong>{item.display_name || "Sin nombre"}</strong><br/><small>{item.email || item.id}</small></td><td><form action={adminUpdateUser} className="admin-inline-form"><input type="hidden" name="user_id" value={item.id}/><select name="role" defaultValue={item.role}><option value="free">Free</option><option value="pro">Pro</option><option value="admin">Admin</option></select></form></td><td><span className={`status-pill ${item.is_active?"status-active":"status-danger"}`}>{item.is_active?"Activo":"De baja"}</span></td><td>{new Intl.DateTimeFormat("es-ES",{dateStyle:"short"}).format(new Date(item.created_at))}</td><td><form action={adminUpdateUser} className="admin-inline-form"><input type="hidden" name="user_id" value={item.id}/><input type="hidden" name="role" value={item.role}/><input type="hidden" name="is_active" value={item.is_active?"false":"true"}/><button className="btn btn-secondary" type="submit">{item.is_active?"Dar de baja":"Reactivar"}</button></form><form action={adminUpdateUser} className="admin-inline-form"><input type="hidden" name="user_id" value={item.id}/><input type="hidden" name="is_active" value={item.is_active?"true":"false"}/><select name="role" defaultValue={item.role}><option value="free">Free</option><option value="pro">Pro</option><option value="admin">Admin</option></select><button className="btn btn-primary" type="submit">Guardar</button></form></td></tr>)}</tbody></table></div></div></section></main></div>;
+}
