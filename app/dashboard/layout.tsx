@@ -4,6 +4,7 @@ import "./dashboard-modern.css";
 import "./dashboard-layout.css";
 import "./help.css";
 import "./bitpanda.css";
+import "./connections.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardSidebar from "./dashboard-sidebar";
