@@ -46,15 +46,19 @@ export async function resyncAllExchanges() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id,connection_id").eq("user_id", user.id);
+  const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id,connection_id,exchange_connections(provider_type)").eq("user_id", user.id);
   if (accountsError) throw new Error(accountsError.message);
-  const accountIds = (accounts || []).map((account) => account.id);
-  if (accountIds.length) {
-    const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", user.id).in("account_id", accountIds);
+  const apiAccounts = (accounts || []).filter((account) => {
+    const connection = Array.isArray(account.exchange_connections) ? account.exchange_connections[0] : account.exchange_connections;
+    return connection?.provider_type === "api";
+  });
+  const apiAccountIds = apiAccounts.map((account) => account.id);
+  if (apiAccountIds.length) {
+    const { error: deleteError } = await supabase.from("transactions").delete().eq("user_id", user.id).in("account_id", apiAccountIds);
     if (deleteError) throw new Error(`No se pudieron borrar los movimientos: ${deleteError.message}`);
   }
 
-  const connectionIds = [...new Set((accounts || []).map((account) => account.connection_id).filter(Boolean))] as string[];
+  const connectionIds = [...new Set(apiAccounts.map((account) => account.connection_id).filter(Boolean))] as string[];
   if (!connectionIds.length) {
     revalidatePath("/dashboard"); revalidatePath("/dashboard/exchanges"); revalidatePath("/dashboard/movimientos");
     return;
@@ -65,7 +69,7 @@ export async function resyncAllExchanges() {
   for (const connection of connections || []) {
     const exchange = Array.isArray(connection.exchanges) ? connection.exchanges[0] : connection.exchanges;
     if ((exchange?.code || "").toLowerCase() !== "bitpanda") continue;
-    const account = (accounts || []).find((item) => item.connection_id === connection.id);
+    const account = apiAccounts.find((item) => item.connection_id === connection.id);
     if (!account) continue;
     const { data: apiKey, error: keyError } = await supabase.rpc("get_exchange_api_key", { p_connection_id: connection.id });
     if (keyError || !apiKey) continue;
@@ -115,7 +119,7 @@ export async function importBitpandaCsv(formData: FormData) {
   const { data: account } = await supabase.from("accounts").select("id,connection_id,exchange_connections(exchange_id,exchanges(code))").eq("id", accountId).eq("user_id", user.id).maybeSingle();
   if (!account) throw new Error("Cuenta no encontrada.");
   const connection = Array.isArray(account.exchange_connections) ? account.exchange_connections[0] : account.exchange_connections;
-  const exchange = Array.isArray(connection?.exchanges) ? connection.exchanges[0] : connection?.exchanges;
+  const exchange = Array.isArray(connection?.exchanges) ? connection?.exchanges[0] : connection?.exchanges;
   if ((exchange?.code || "").toLowerCase() !== "bitpanda") throw new Error("La cuenta seleccionada no es Bitpanda.");
   const buffer = await file.arrayBuffer();
   const text = new TextDecoder("windows-1252").decode(buffer);
