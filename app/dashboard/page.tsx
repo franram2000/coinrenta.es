@@ -6,38 +6,108 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Resumen", description: "Resumen patrimonial y fiscal de CoinRenta.", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage(){
- const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser(); if(!user) redirect("/login");
- const [{data:profile},{count:transactionCount},{count:importCount},{data:snapshots},{data:transactions}]=await Promise.all([
-  supabase.from("profiles").select("display_name,role").eq("id",user.id).maybeSingle(),
-  supabase.from("transactions").select("id",{count:"exact",head:true}).eq("user_id",user.id),
-  supabase.from("imports").select("id",{count:"exact",head:true}).eq("user_id",user.id),
-  supabase.from("balance_snapshots").select("captured_at,value_eur,quantity,asset:assets(symbol,name),account:accounts(name,connection:exchange_connections(label,exchange:exchanges(name,code)))").eq("user_id",user.id).order("captured_at",{ascending:true}).limit(1000),
-  supabase.from("transactions").select("id,occurred_at,transaction_type,base_amount,quote_amount,price_currency,accounts(name),assets:assets(symbol)").eq("user_id",user.id).order("occurred_at",{ascending:false}).limit(5)
- ]);
- const role=profile?.role||"free"; const plan=role==="admin"?"Admin":role==="pro"?"Pro":"Free"; const hasPro=role!=="free";
- const latest=new Map<string,any>(); for(const row of snapshots||[]){const account=Array.isArray(row.account)?row.account[0]:row.account;const asset=Array.isArray(row.asset)?row.asset[0]:row.asset;const key=`${account?.name||"cuenta"}:${asset?.symbol||"asset"}`;if(!latest.has(key)||new Date(row.captured_at).getTime()>new Date(latest.get(key).captured_at).getTime())latest.set(key,{...row,account,asset})}
- const exchanges=new Map<string,{name:string;code:string;value:number;assets:number}>(); for(const item of latest.values()){const ex=item.account?.connection?.exchange;const key=ex?.code||ex?.name||"other";const cur=exchanges.get(key)||{name:ex?.name||"Sin exchange",code:ex?.code||"—",value:0,assets:0};cur.value+=Number(item.value_eur||0);cur.assets+=1;exchanges.set(key,cur)}
- const exchangeRows=[...exchanges.values()].sort((a,b)=>b.value-a.value); const total=exchangeRows.reduce((s,x)=>s+x.value,0); const chart=makeChart(snapshots||[]); const name=profile?.display_name||user.email?.split("@")[0]||"usuario"; const initials=name.slice(0,1).toUpperCase(); const year=new Date().getFullYear();
- return <>
-  <header className="app-topbar dashboard-topbar-modern">
-   <div className="dashboard-search">⌕ <span>Buscar por activo, exchange, transacción...</span></div>
-   <div className="topbar-actions"><span className="notification">♧<i/></span><span className="profile-chip">{initials}</span><div className="profile-summary"><strong>{name}</strong><span>{plan}</span></div><span className="profile-chevron">⌄</span></div>
-  </header>
-  <section className="dashboard-content dashboard-modern-content">
-   <div className="dashboard-heading-row"><div><h1>Hola, {name} 👋</h1><p>Aquí tienes un resumen de tu actividad fiscal y patrimonial.</p></div><button className="period-selector" type="button">▣ &nbsp;Ejercicio fiscal {year}　⌄</button></div>
-   <div className="dashboard-layout-grid">
-    <div className="dashboard-main-column">
-     <div className="stat-grid stat-grid-modern"><Stat icon="◎" label="Total de activos" value={eur(total)} note="Tu patrimonio actual"/><Stat icon="▤" label="Movimientos" value={String(transactionCount||0)} note="Movimientos registrados"/><Stat icon="⇧" label="Importaciones" value={String(importCount||0)} note="Archivos importados"/><Stat icon="✓" label="Activos" value={String(latest.size)} note="Posiciones detectadas"/></div>
-     <section className="panel-card chart-card"><div className="panel-head"><h3>Evolución de tus activos</h3><div className="chart-periods"><span>7D</span><span>30D</span><span>3M</span><span className="selected">1A</span><span>Todo</span></div></div><div className="asset-chart"><div className="chart-y-labels"><span>€ 35.000</span><span>€ 28.000</span><span>€ 21.000</span><span>€ 14.000</span><span>€ 7.000</span><span>€ 0</span></div><svg viewBox="0 0 760 250" preserveAspectRatio="none" aria-label="Evolución"><defs><linearGradient id="crFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#0FA7A0" stopOpacity=".35"/><stop offset="100%" stopColor="#0FA7A0" stopOpacity="0"/></linearGradient></defs><path d={chart.area} fill="url(#crFill)"/><path d={chart.line} fill="none" stroke="#20C9BF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg><div className="chart-x-labels"><span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dic</span></div></div><div className="chart-footer"><div><span>Valor total actual</span><strong>{eur(total)}</strong></div><div><span>Máximo histórico</span><strong>{eur(chart.max)}</strong></div><div><span>Mínimo histórico</span><strong>{eur(chart.min)}</strong></div></div></section>
-     <section className="panel-card exchange-holdings-card"><div className="panel-head"><div><h3>Tus activos por exchange</h3><p>Valor consolidado según el último snapshot disponible.</p></div><Link className="panel-link" href="/dashboard/exchanges">Gestionar exchanges</Link></div>{exchangeRows.length?<div className="exchange-table"><div className="exchange-table-head"><span>Exchange</span><span>Valor total</span><span>% del total</span><span>Activos</span><span>Tendencia</span></div>{exchangeRows.map(ex=><div className="exchange-table-row" key={ex.code+ex.name}><div className="exchange-name"><span className="exchange-logo">{ex.code.slice(0,1)}</span><div><strong>{ex.name}</strong><small>{ex.assets} posiciones</small></div></div><strong>{eur(ex.value)}</strong><span>{total?((ex.value/total)*100).toFixed(1):"0.0"}%</span><span>{ex.assets}</span><span className="mini-trend">⌁⌁⌁⌁</span></div>)}</div>:<div className="empty-state"><strong>Aún no hay saldos para mostrar</strong><p>Conecta un exchange o importa un histórico para ver aquí tus activos.</p></div>}</section>
-    </div>
-    <aside className="dashboard-right-column"><section className="pro-summary-card"><div className="pro-summary-icon">♛</div><div className="pro-summary-heading"><strong>Tu plan actual</strong><span>{plan}</span></div><ul><li>Soporte prioritario</li><li>Sin límites de importaciones</li><li>Informes fiscales avanzados</li><li>Acceso a todos los exchanges</li></ul>{!hasPro&&<Link className="btn btn-primary btn-full" href="/dashboard/configuracion">Mejorar a Pro</Link>}{hasPro&&<Link className="btn btn-outline-full" href="/dashboard/configuracion">Gestionar suscripción</Link>}</section><section className="panel-card quick-card"><div className="panel-head"><h3>Accesos rápidos</h3></div><div className="quick-grid"><Link href="/dashboard/importar">⇧<span>Importar CSV</span></Link><Link href="/dashboard/exchanges">↻<span>Conectar Exchange</span></Link><Link href="/dashboard/informes">▣<span>Ver informes</span></Link><Link href="/dashboard/ayuda">?<span>Ayuda</span></Link></div></section><section className="panel-card recent-card"><div className="panel-head"><h3>Movimientos recientes</h3><Link className="panel-link" href="/dashboard/movimientos">Ver todos</Link></div>{transactions?.length?<div className="recent-list">{transactions.map(tx=><div className="recent-row" key={tx.id}><span className="recent-icon">◆</span><div><strong>{tx.transaction_type}</strong><small>{(tx.accounts as {name?:string}|null)?.name||"Cuenta"} · {(tx.assets as {symbol?:string}|null)?.symbol||"Activo"}</small></div><div className="recent-value"><strong>{tx.quote_amount?`${Number(tx.quote_amount).toLocaleString("es-ES",{maximumFractionDigits:2})} ${tx.price_currency||""}`:"—"}</strong><small>{new Intl.DateTimeFormat("es-ES",{day:"2-digit",month:"short"}).format(new Date(tx.occurred_at))}</small></div></div>)}</div>:<div className="empty-state"><strong>Sin movimientos todavía</strong><p>Cuando haya actividad aparecerá aquí.</p></div>}</section></aside>
-   </div>
-   <div className="dashboard-footer-trust"><span>◈ <strong>Seguro y confiable</strong><small>Tus datos y claves siempre protegidos</small></span><span>▣ <strong>Cumplimiento fiscal</strong><small>Calcula y organiza tus impuestos</small></span><span>⟳ <strong>Conecta tus exchanges</strong><small>Automatiza la importación de datos</small></span><span>◉ <strong>Soporte en español</strong><small>Estamos aquí para ayudarte</small></span></div>
-  </section>
- </>
+type Period = "7d" | "30d" | "3m" | "1y" | "all";
+type Snapshot = any;
+type Transaction = any;
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const period: Period = ["7d", "30d", "3m", "1y", "all"].includes(params.period || "") ? params.period as Period : "1y";
+  const now = Date.now();
+  const periodMs: Record<Exclude<Period, "all">, number> = { "7d": 7 * 86400000, "30d": 30 * 86400000, "3m": 90 * 86400000, "1y": 365 * 86400000 };
+  const cutoff = period === "all" ? 0 : now - periodMs[period];
+
+  const [{ data: profile }, { count: transactionCount }, { count: importCount }, { count: connectionCount }, { data: snapshots }, { data: transactions }] = await Promise.all([
+    supabase.from("profiles").select("display_name,role").eq("id", user.id).maybeSingle(),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("imports").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("exchange_connections").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("balance_snapshots").select("id,captured_at,value_eur,quantity,price_eur,source,asset:assets(symbol,name),account:accounts(id,name,connection:exchange_connections(id,label,provider_type,exchange:exchanges(name,code)))").eq("user_id", user.id).order("captured_at", { ascending: true }).limit(5000),
+    supabase.from("transactions").select("id,occurred_at,transaction_type,base_amount,quote_amount,price_currency,source,account:accounts(name,connection:exchange_connections(label,provider_type)),asset:assets(symbol,name)").eq("user_id", user.id).order("occurred_at", { ascending: false }).limit(8),
+  ]);
+
+  const role = profile?.role || "free";
+  const plan = role === "admin" ? "Admin" : role === "pro" ? "Pro" : "Free";
+  const hasPro = role !== "free";
+  const name = profile?.display_name || user.email?.split("@")[0] || "usuario";
+  const initials = name.slice(0, 1).toUpperCase();
+
+  const filteredSnapshots = (snapshots || []).filter((row: Snapshot) => new Date(row.captured_at).getTime() >= cutoff);
+  const latest = latestPositions(snapshots || []);
+  const currentRows = [...latest.values()].filter((row: Snapshot) => Math.abs(Number(row.quantity || 0)) > 1e-12);
+  const valuedRows = currentRows.filter((row: Snapshot) => row.value_eur !== null && row.value_eur !== undefined);
+  const total = valuedRows.reduce((sum: number, row: Snapshot) => sum + Number(row.value_eur || 0), 0);
+  const unvalued = currentRows.length - valuedRows.length;
+  const chart = makeChart(filteredSnapshots.length ? filteredSnapshots : snapshots || []);
+  const exchangeRows = buildExchangeRows(currentRows, snapshots || []);
+  const periodHref = (value: Period) => value === "1y" ? "/dashboard" : `/dashboard?period=${value}`;
+
+  return <>
+    <header className="app-topbar dashboard-topbar-modern">
+      <div className="dashboard-search">⌕ <span>Buscar por activo, exchange, transacción...</span></div>
+      <div className="topbar-actions"><span className="notification">♧<i /></span><span className="profile-chip">{initials}</span><div className="profile-summary"><strong>{name}</strong><span>{plan}</span></div><span className="profile-chevron">⌄</span></div>
+    </header>
+    <section className="dashboard-content dashboard-modern-content">
+      <div className="dashboard-heading-row"><div><h1>Hola, {name} 👋</h1><p>Aquí tienes un resumen real de tus conexiones, movimientos e importaciones.</p></div><div className="period-selector-wrap"><span className="period-selector-label">Periodo</span><div className="chart-periods dashboard-periods">{(["7d", "30d", "3m", "1y", "all"] as Period[]).map((value) => <Link href={periodHref(value)} className={period === value ? "selected" : ""} key={value}>{value === "all" ? "Todo" : value.toUpperCase()}</Link>)}</div></div></div>
+      <div className="dashboard-layout-grid">
+        <div className="dashboard-main-column">
+          <div className="stat-grid stat-grid-modern"><Stat icon="◎" label="Total de activos" value={eur(total)} note={unvalued ? `${unvalued} posiciones sin valoración EUR` : "Valoración actual disponible"} accent={unvalued > 0}/><Stat icon="▤" label="Movimientos" value={String(transactionCount || 0)} note="Registros normalizados"/><Stat icon="⇧" label="Importaciones" value={String(importCount || 0)} note="CSV registrados"/><Stat icon="✓" label="Activos" value={String(currentRows.length)} note={`${connectionCount || 0} conexiones activas`}/></div>
+          <section className="panel-card chart-card"><div className="panel-head"><div><h3>Evolución de tus activos</h3><p>{chart.caption}</p></div><span className="summary-data-note">Datos de snapshots API + CSV</span></div><div className="asset-chart"><div className="chart-y-labels">{chart.yLabels.map((label: string) => <span key={label}>{label}</span>)}</div><svg viewBox="0 0 760 250" preserveAspectRatio="none" aria-label="Evolución de activos"><defs><linearGradient id="crFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#0FA7A0" stopOpacity=".35"/><stop offset="100%" stopColor="#0FA7A0" stopOpacity="0"/></linearGradient></defs><path d={chart.area} fill="url(#crFill)"/><path d={chart.line} fill="none" stroke="#20C9BF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg><div className="chart-x-labels">{chart.labels.map((label: string) => <span key={label}>{label}</span>)}</div></div><div className="chart-footer"><div><span>Valor total actual</span><strong>{eur(total)}</strong></div><div><span>Máximo del periodo</span><strong>{eur(chart.max)}</strong></div><div><span>Mínimo del periodo</span><strong>{eur(chart.min)}</strong></div></div></section>
+          <section className="panel-card exchange-holdings-card"><div className="panel-head"><div><h3>Tus activos por exchange</h3><p>Consolidación de las posiciones actuales disponibles en CoinRenta.</p></div><Link className="panel-link" href="/dashboard/exchanges">Gestionar conexiones</Link></div>{exchangeRows.length ? <div className="exchange-table"><div className="exchange-table-head"><span>Exchange</span><span>Valor total</span><span>% del total</span><span>Activos</span><span>Tendencia</span></div>{exchangeRows.map((ex: any) => <div className="exchange-table-row" key={ex.key}><div className="exchange-name"><span className="exchange-logo">{ex.code.slice(0, 1).toUpperCase()}</span><div><strong>{ex.name}</strong><small>{ex.assets} posiciones</small><span className="dashboard-summary-exchange-source">{ex.source}</span></div></div><strong>{eur(ex.value)}</strong><span>{total ? ((ex.value / total) * 100).toFixed(1) : "0.0"}%</span><span>{ex.assets}</span><span className={ex.change > 0 ? "mini-trend exchange-trend-positive" : ex.change < 0 ? "mini-trend exchange-trend-negative" : "mini-trend exchange-trend-flat"}>{ex.change > 0 ? `+${ex.change.toFixed(1)}%` : `${ex.change.toFixed(1)}%`}</span></div>)}</div> : <div className="dashboard-summary-empty"><strong>Aún no hay saldos para mostrar</strong>Conecta Bitpanda por API o importa un CSV para poblar este panel automáticamente.</div>}</section>
+        </div>
+        <aside className="dashboard-right-column"><section className="pro-summary-card"><div className="pro-summary-icon">♛</div><div className="pro-summary-heading"><strong>Tu plan actual</strong><span>{plan}</span></div><ul><li>Soporte prioritario</li><li>Sin límites de importaciones</li><li>Informes fiscales avanzados</li><li>Acceso a todos los exchanges</li></ul>{!hasPro && <Link className="btn btn-primary btn-full" href="/dashboard/configuracion">Mejorar a Pro</Link>}{hasPro && <Link className="btn btn-outline-full" href="/dashboard/configuracion">Gestionar suscripción</Link>}</section><section className="panel-card quick-card"><div className="panel-head"><h3>Accesos rápidos</h3></div><div className="quick-grid"><Link href="/dashboard/importar">⇧<span>Importar CSV</span></Link><Link href="/dashboard/exchanges">↻<span>Conectar Exchange</span></Link><Link href="/dashboard/movimientos">≋<span>Movimientos</span></Link><Link href="/dashboard/ayuda">?<span>Ayuda</span></Link></div></section><section className="panel-card recent-card"><div className="panel-head"><h3>Movimientos recientes</h3><Link className="panel-link" href="/dashboard/movimientos">Ver todos</Link></div>{transactions?.length ? <div className="recent-list">{transactions.map((tx: Transaction) => { const account = one(tx.account); const asset = one(tx.asset); return <div className="recent-row" key={tx.id}><span className="recent-icon">◆</span><div><strong>{labelType(tx.transaction_type)}</strong><small>{account?.name || "Cuenta"} · {asset?.symbol || "Activo"} · {sourceLabel(tx.source)}</small></div><div className="recent-value"><strong>{tx.quote_amount !== null && tx.quote_amount !== undefined ? `${Number(tx.quote_amount).toLocaleString("es-ES", { maximumFractionDigits: 2 })} ${tx.price_currency || ""}` : "—"}</strong><small>{new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short" }).format(new Date(tx.occurred_at))}</small></div></div>; })}</div> : <div className="empty-state"><strong>Sin movimientos todavía</strong><p>Cuando conectes un exchange o importes un CSV aparecerán aquí.</p></div>}</section></aside>
+      </div>
+      <div className="dashboard-footer-trust"><span>◈ <strong>Seguro y confiable</strong><small>Tus datos y claves siempre protegidos</small></span><span>▣ <strong>Cumplimiento fiscal</strong><small>Datos preparados para tus cálculos</small></span><span>⟳ <strong>Conexiones automáticas</strong><small>{connectionCount || 0} conexiones registradas</small></span><span>◉ <strong>Soporte en español</strong><small>Estamos aquí para ayudarte</small></span></div>
+    </section>
+  </>;
 }
-function Stat({icon,label,value,note}:{icon:string;label:string;value:string;note:string}){return <article className="stat-card stat-card-modern"><span className="modern-stat-icon">{icon}</span><span className="stat-label">{label}</span><strong>{value}</strong><span className="stat-note">{note}</span></article>}
-function eur(value:number){return value.toLocaleString("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:2})}
-function makeChart(rows:any[]){const map=new Map<string,number>();for(const row of rows){const d=new Date(row.captured_at).toISOString().slice(0,10);map.set(d,(map.get(d)||0)+Number(row.value_eur||0))}const values=[...map.values()];const source=values.length?values:[0];const max=Math.max(...source,1),min=Math.min(...source);const sampled=source.length>48?source.filter((_,i)=>i%Math.ceil(source.length/48)===0).slice(0,48):source;const points=sampled.map((v,i)=>`${(sampled.length===1?0:(i/(sampled.length-1))*760).toFixed(1)},${(220-(v/max)*195).toFixed(1)}`);return{line:`M ${points.join(" L ")}`,area:`M 0 220 L ${points.join(" L ")} L 760 220 Z`,max,min}}
+
+function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
+function eur(value: number){ return value.toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }); }
+function labelType(type: string){ return type.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase()); }
+function sourceLabel(source: string){ return source === "api" ? "API" : source === "csv" ? "CSV" : source; }
+
+function latestPositions(rows: Snapshot[]) {
+  const result = new Map<string, Snapshot>();
+  for(const row of rows){
+    const account = one(row.account); const asset = one(row.asset); const key = `${account?.id || account?.name || "account"}:${asset?.symbol || "asset"}`;
+    const existing = result.get(key);
+    if(!existing || new Date(row.captured_at).getTime() > new Date(existing.captured_at).getTime()) result.set(key, { ...row, account, asset });
+  }
+  return result;
+}
+
+function buildExchangeRows(current: Snapshot[], history: Snapshot[]) {
+  const rows = new Map<string, any>();
+  for(const item of current){
+    const account = one(item.account); const connection = one(account?.connection); const exchange = one(connection?.exchange); const key = connection?.id || `${exchange?.code || "other"}:${account?.name || "account"}`;
+    const value = Number(item.value_eur || 0); const currentRow = rows.get(key) || { key, name: exchange?.name || "Sin exchange", code: exchange?.code || "—", value: 0, assets: 0, source: item.source === "calculated" || connection?.provider_type === "csv" ? "CSV" : "API", change: 0 };
+    currentRow.value += value; currentRow.assets += 1; rows.set(key, currentRow);
+  }
+  const historyByKey = new Map<string, Map<string, number>>();
+  for(const item of history){
+    const account = one(item.account); const connection = one(account?.connection); const exchange = one(connection?.exchange); const key = connection?.id || `${exchange?.code || "other"}:${account?.name || "account"}`; const date = new Date(item.captured_at).toISOString().slice(0,10);
+    if(item.value_eur === null || item.value_eur === undefined) continue;
+    const series = historyByKey.get(key) || new Map<string, number>(); series.set(date, (series.get(date) || 0) + Number(item.value_eur || 0)); historyByKey.set(key, series);
+  }
+  for(const [key, row] of rows){ const values = [...(historyByKey.get(key)?.entries() || [])].sort((a,b) => a[0].localeCompare(b[0])).map(([,value]) => value); const first = values[0] ?? row.value; row.change = first ? ((row.value - first) / Math.abs(first)) * 100 : 0; rows.set(key,row); }
+  return [...rows.values()].sort((a,b) => b.value - a.value);
+}
+
+function makeChart(rows: Snapshot[]){
+  const byDayAndPosition = new Map<string, number>();
+  for(const row of rows){ const account = one(row.account); const asset = one(row.asset); if(row.value_eur === null || row.value_eur === undefined) continue; const day = new Date(row.captured_at).toISOString().slice(0,10); const key = `${day}:${account?.id || account?.name || "account"}:${asset?.symbol || "asset"}`; byDayAndPosition.set(key, Number(row.value_eur || 0)); }
+  const days = new Map<string,number>(); for(const [key,value] of byDayAndPosition){ const day = key.split(":")[0]; days.set(day,(days.get(day)||0)+value); }
+  const entries = [...days.entries()].sort((a,b)=>a[0].localeCompare(b[0])); const values = entries.map(([,value])=>value); const safe = values.length ? values : [0]; const max = Math.max(...safe,1); const min = Math.min(...safe,0);
+  const sampled = safe.length > 60 ? safe.filter((_,index)=>index % Math.ceil(safe.length / 60) === 0).slice(0,60) : safe;
+  const points = sampled.map((value,index)=>`${(sampled.length===1?380:(index/(sampled.length-1))*760).toFixed(1)},${(220-(value/max)*195).toFixed(1)}`);
+  const sampleEntries = entries.length > 12 ? entries.filter((_,index)=>index % Math.ceil(entries.length/12) === 0).slice(0,12) : entries;
+  const labels = sampleEntries.length ? sampleEntries.map(([day])=>new Intl.DateTimeFormat("es-ES",{day:"2-digit",month:"short"}).format(new Date(`${day}T12:00:00Z`))) : ["Sin datos"];
+  const yLabels = [1, .75, .5, .25, 0].map((factor)=>eur(max*factor));
+  const caption = entries.length ? `${entries.length} días con valoración disponible` : "Todavía no hay valoraciones disponibles";
+  return { line:`M ${points.join(" L ")}`, area:`M 0 220 L ${points.join(" L ")} L 760 220 Z`, max, min, labels, yLabels, caption };
+}
