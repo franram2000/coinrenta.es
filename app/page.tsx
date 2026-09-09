@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const features = [
-  ["↗", "Conecta tus exchanges", "Centraliza varias plataformas y mantén el origen de cada movimiento."],
+  ["↗", "Conecta tus exchanges", "Centraliza varias plataformas y conserva el origen de cada movimiento."],
   ["CSV", "Importa tus movimientos", "Sube los CSV de tus exchanges cuando prefieras trabajar con archivos."],
-  ["€", "Trabaja en EUR", "Normaliza tus datos para consultar una visión fiscal clara y homogénea."],
+  ["€", "Trabaja en EUR", "Normaliza tus datos para obtener una visión fiscal clara y homogénea."],
   ["⌁", "Detecta incidencias", "Encuentra duplicados, huecos y movimientos que necesitan revisión."],
   ["▣", "Separa tus ejercicios", "Mantén históricos por año y vuelve a revisar cualquier operación."],
   ["✓", "Revisa antes de presentar", "Consulta el estado de tus datos antes de utilizarlos en tu declaración."],
@@ -22,20 +22,62 @@ export default async function Home() {
     <>
       <header className="site-header">
         <nav className="container nav" aria-label="Navegación principal">
-          <Link href="/" aria-label="CoinRenta, inicio"><span className="brand"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></span></Link>
-          <div className="nav-links"><a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a></div>
-          <div className="nav-actions"><Link className="btn btn-secondary" href="/login">Iniciar sesión</Link><Link className="btn btn-primary" href="/registro">Crear cuenta</Link></div>
-          <details className="mobile-nav"><summary aria-label="Abrir menú">☰</summary><div className="mobile-menu"><a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a><Link href="/login">Iniciar sesión</Link><Link href="/registro">Crear cuenta</Link></div></details>
+          <Link href="/" aria-label="CoinRenta, inicio">
+            <span className="brand"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></span>
+          </Link>
+          <div className="nav-links">
+            <a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a>
+          </div>
+          <div className="nav-actions">
+            <Link className="btn btn-secondary" href="/login">Iniciar sesión</Link>
+            <Link className="btn btn-primary" href="/registro">Crear cuenta</Link>
+          </div>
+          <details className="mobile-nav">
+            <summary aria-label="Abrir menú">☰</summary>
+            <div className="mobile-menu">
+              <a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a>
+              <Link href="/login">Iniciar sesión</Link><Link href="/registro">Crear cuenta</Link>
+            </div>
+          </details>
         </nav>
       </header>
+
       <main>
-        <section className="hero" id="inicio" aria-labelledby="hero-title"><div className="container hero-grid"><div><div className="eyebrow"><span className="eyebrow-dot" /> Fiscalidad cripto, sin caos</div><h1 id="hero-title">Tu cripto.<br /><em>Lista para la Renta.</em></h1><p className="hero-copy">Entra en CoinRenta, conecta tus exchanges o importa sus CSV y convierte tus movimientos en una visión clara y revisable.</p><div className="hero-actions"><Link className="btn btn-primary btn-large" href="/registro">Crear cuenta gratis →</Link><Link className="btn btn-secondary btn-large" href="/login">Ya tengo cuenta</Link></div><div className="hero-trust"><span><i /> Acceso privado</span><span><i /> Importación CSV</span><span><i /> Multi-exchange</span></div></div><div className="dashboard-wrap" aria-label="Vista previa del dashboard de CoinRenta"><div className="dashboard"><div className="dashboard-top"><div className="dash-brand"><span className="dash-brand-mark">₿</span> CoinRenta</div><div className="dash-pill">Ejercicio 2025</div></div><div className="dashboard-body"><div className="dash-grid"><div className="dash-card"><div className="dash-label">Resultado fiscal</div><div className="dash-value">+2.418,63 €</div><div className="dash-meta">↑ +18,4% frente al coste</div><div className="chart" aria-hidden="true">{Array.from({length:10},(_,i)=><span className="bar" key={i} />)}</div></div><div className="dash-card"><div className="dash-label">Activos</div><div className="asset-list">{[["BTC","Bitcoin","12.840 €"],["ETH","Ethereum","4.390 €"],["USD","USDC","2.171 €"]].map(([symbol,name,value])=><div className="asset" key={symbol}><div className="asset-main"><span className="asset-icon">{symbol}</span><div><div className="asset-name">{name}</div><div className="asset-symbol">Cuenta consolidada</div></div></div><div><div className="asset-value">{value}</div><div className="asset-change">+8,2%</div></div></div>)}</div></div></div></div></div></div></section>
-        <section className="section" id="funciones" aria-labelledby="functions-title"><div className="container"><div className="section-head center"><div className="section-kicker">Dentro de CoinRenta</div><h2 id="functions-title">Todo lo que necesitas para poner orden.</h2><p className="section-lead">Una aplicación web privada, pensada para centralizar datos antes de llegar al momento de presentar la información.</p></div><div className="feature-grid">{features.map(([icon,title,text])=><article className="feature-card" key={title}><div className="feature-icon">{icon}</div><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+        <section className="hero" id="inicio" aria-labelledby="hero-title">
+          <div className="container hero-grid">
+            <div>
+              <div className="eyebrow"><span className="eyebrow-dot" /> Fiscalidad cripto, sin caos</div>
+              <h1 id="hero-title">Tu cripto.<br /><em>Lista para la Renta.</em></h1>
+              <p className="hero-copy">Crea tu espacio privado, conecta tus exchanges o importa sus CSV y convierte tus movimientos en una visión clara y revisable.</p>
+              <div className="hero-actions"><Link className="btn btn-primary btn-large" href="/registro">Crear cuenta gratis →</Link><Link className="btn btn-secondary btn-large" href="/login">Ya tengo cuenta</Link></div>
+              <div className="hero-trust"><span><i /> Acceso privado</span><span><i /> Importación CSV</span><span><i /> Multi-exchange</span></div>
+            </div>
+
+            <div className="dashboard-wrap" aria-label="Vista previa del dashboard de CoinRenta">
+              <div className="dashboard">
+                <div className="dashboard-top"><div className="dash-brand"><span className="dash-brand-mark">₿</span> CoinRenta</div><div className="dash-pill">Ejercicio 2025</div></div>
+                <div className="dashboard-body">
+                  <div className="dash-grid">
+                    <div className="dash-card"><div className="dash-label">Resultado fiscal</div><div className="dash-value">+2.418,63 €</div><div className="dash-meta">↑ +18,4% frente al coste</div><div className="chart" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <span className="bar" key={i} style={{ height: `${35 + i * 6}%` }} />)}</div></div>
+                    <div className="dash-card"><div className="dash-label">Activos</div><div className="asset-list">{[["BTC", "Bitcoin", "12.840 €"], ["ETH", "Ethereum", "4.390 €"], ["USD", "USDC", "2.171 €"]].map(([symbol, name, value]) => <div className="asset" key={symbol}><div className="asset-main"><span className="asset-icon">{symbol}</span><div><div className="asset-name">{name}</div><div className="asset-symbol">Cuenta consolidada</div></div></div><div><div className="asset-value">{value}</div><div className="asset-change">+8,2%</div></div></div>)}</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section" id="funciones" aria-labelledby="functions-title"><div className="container"><div className="section-head center"><div className="section-kicker">Dentro de CoinRenta</div><h2 id="functions-title">Todo lo que necesitas para poner orden.</h2><p className="section-lead">Una aplicación web privada, pensada para centralizar tus datos antes de llegar al momento de presentar la información.</p></div><div className="feature-grid">{features.map(([icon, title, text]) => <article className="feature-card" key={title}><div className="feature-icon">{icon}</div><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+
         <section className="section process" id="como-funciona" aria-labelledby="process-title"><div className="container"><div className="section-head center"><div className="section-kicker">Cómo funciona</div><h2 id="process-title">Entra. Conecta. Revisa.</h2><p className="section-lead">Empieza creando tu espacio privado y añade tus fuentes de datos cuando estés listo.</p></div><div className="step-grid"><article className="step"><span className="step-number">01</span><h3>Crea tu cuenta</h3><p>Regístrate con tu correo y accede a un espacio privado para tus datos.</p></article><article className="step"><span className="step-number">02</span><h3>Añade tus datos</h3><p>Conecta exchanges mediante API o importa los CSV que ya tengas.</p></article><article className="step"><span className="step-number">03</span><h3>Revisa tu ejercicio</h3><p>Consulta movimientos, incidencias y resultados desde un único dashboard.</p></article></div></div></section>
+
         <section className="section" id="seguridad" aria-labelledby="security-title"><div className="container security"><div><div className="section-kicker">Seguridad primero</div><h2 id="security-title">Una cuenta privada para tus datos financieros.</h2><p className="section-lead">La autenticación y el acceso a los datos están preparados con sesiones seguras mediante Supabase SSR. Las áreas privadas se protegen en servidor antes de renderizar datos del usuario.</p></div><div className="security-panel"><div className="security-check"><span className="check">✓</span><div><strong>Acceso autenticado</strong><span>Solo los usuarios identificados pueden entrar al dashboard.</span></div></div><div className="security-check"><span className="check">✓</span><div><strong>Datos separados por usuario</strong><span>Las consultas utilizan el usuario autenticado y las políticas RLS de Supabase.</span></div></div><div className="security-check"><span className="check">✓</span><div><strong>Credenciales API aisladas</strong><span>Las claves de conexión no se exponen desde las tablas públicas.</span></div></div><div className="security-check"><span className="check">✓</span><div><strong>Sin custodia de fondos</strong><span>CoinRenta se centra en datos, movimientos y cálculo, no en retirar criptomonedas.</span></div></div></div></div></section>
+
         <section className="section" id="faq" aria-labelledby="faq-title"><div className="container"><div className="section-head center"><div className="section-kicker">Preguntas frecuentes</div><h2 id="faq-title">Antes de empezar</h2></div><div className="faq-grid"><details className="faq-item"><summary>¿Tengo que conectar mis exchanges?</summary><p>No. Puedes usar APIs de solo lectura cuando estén disponibles o importar CSV manualmente.</p></details><details className="faq-item"><summary>¿Puedo usar varios exchanges?</summary><p>Sí. El modelo está diseñado para centralizar varias cuentas y fuentes de datos.</p></details><details className="faq-item"><summary>¿Necesito tener todos los datos desde el primer día?</summary><p>No. Puedes crear la cuenta y añadir fuentes de información progresivamente.</p></details><details className="faq-item"><summary>¿CoinRenta sustituye a un asesor fiscal?</summary><p>No. Es una herramienta de organización y cálculo; la revisión final de tu situación corresponde al usuario y, cuando proceda, a un profesional.</p></details></div></div></section>
-        <section className="section"><div className="container"><div className="cta"><div className="section-kicker">Tu espacio ya te está esperando</div><h2>Empieza con CoinRenta.</h2><p>Cuenta privada, dashboard y todas tus fuentes de datos en un solo lugar.</p><div className="hero-actions" style={{justifyContent:"center"}}><Link className="btn btn-primary btn-large" href="/registro">Crear mi cuenta →</Link><Link className="btn btn-secondary btn-large" href="/login">Iniciar sesión</Link></div></div></div></section>
+
+        <section className="section"><div className="container"><div className="cta"><div className="section-kicker">Tu espacio ya te está esperando</div><h2>Empieza con CoinRenta.</h2><p>Cuenta privada, dashboard y todas tus fuentes de datos en un solo lugar.</p><div className="hero-actions" style={{ justifyContent: "center" }}><Link className="btn btn-primary btn-large" href="/registro">Crear mi cuenta →</Link><Link className="btn btn-secondary btn-large" href="/login">Iniciar sesión</Link></div></div></div></section>
       </main>
+
       <footer className="site-footer"><div className="container footer-row"><div><span className="brand"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></span><span> · © {new Date().getFullYear()} CoinRenta</span></div><div className="footer-links"><Link href="/login">Acceso</Link><Link href="/registro">Registro</Link><a href="#seguridad">Seguridad</a><a href="#faq">FAQ</a></div></div></footer>
     </>
   );
