@@ -1,0 +1,16 @@
+/* Explicit vertical separation for dashboard section cards. */
+.connections-page,
+.renta-page,
+.fiscality-page{display:flex !important;flex-direction:column !important;gap:0 !important;align-content:stretch;width:100%;}
+.connections-page>.exchange-hero,
+.connections-page>.panel-card,
+.renta-page>*,
+.fiscality-page>*{min-width:0;}
+.connections-page>.exchange-hero~*,
+.renta-page>*+*,
+.fiscality-page>*+*{margin-top:28px !important;}
+@media(max-width:760px){
+  .connections-page>.exchange-hero~*,
+  .renta-page>*+*,
+  .fiscality-page>*+*{margin-top:18px !important;}
+}
