@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./landing.css";
 
 const siteUrl = "https://coinrenta.es";
 
@@ -17,9 +18,7 @@ export const metadata: Metadata = {
   openGraph: { type: "website", locale: "es_ES", url: siteUrl, siteName: "CoinRenta", title: "CoinRenta | Tu cripto, lista para la Renta", description: "Centraliza tus movimientos, conecta tus exchanges o importa CSV y prepara tus datos fiscales." },
   twitter: { card: "summary_large_image", title: "CoinRenta | Tu cripto, lista para la Renta", description: "Organiza tus operaciones cripto y prepara la información para la Renta." },
   icons: {
-    icon: [
-      { url: "/logo.png", type: "image/png", sizes: "any" },
-    ],
+    icon: [{ url: "/logo.png", type: "image/png", sizes: "any" }],
     apple: [{ url: "/logo.png", type: "image/png" }],
   },
 };
