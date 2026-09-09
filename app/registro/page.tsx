@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import AuthForm from "@/components/auth-form";
 
@@ -12,7 +13,7 @@ export default function RegisterPage() {
   return (
     <main className="auth-page">
       <div className="auth-shell">
-        <div className="auth-brand"><Link href="/"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></Link></div>
+        <div className="auth-brand"><Link href="/"><Image src="/logo.png" alt="CoinRenta" width={44} height={44} priority style={{ width: 44, height: 44, objectFit: "contain" }} /><span className="brand-name">Coin<span>Renta</span></span></Link></div>
         <section className="auth-card" aria-labelledby="register-title">
           <div className="auth-heading"><span className="section-kicker">Empieza en CoinRenta</span><h1 id="register-title">Crea tu cuenta</h1><p>Centraliza tus exchanges y empieza a ordenar tus datos fiscales.</p></div>
           <AuthForm mode="register" />
