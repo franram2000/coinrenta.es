@@ -7,10 +7,9 @@ import LogoutButton from "@/components/logout-button";
 
 const nav = [
   ["▦", "Resumen", "/dashboard"],
-  ["↔", "Exchanges", "/dashboard/exchanges"],
+  ["↔", "Conexiones", "/dashboard/exchanges"],
   ["≋", "Movimientos", "/dashboard/movimientos"],
   ["€", "Fiscalidad", "/dashboard/fiscalidad"],
-  ["▣", "Informes", "/dashboard/informes"],
   ["?", "Ayuda", "/dashboard/ayuda"],
   ["⚙", "Configuración", "/dashboard/configuracion"],
 ] as const;
