@@ -9,7 +9,7 @@ const nav = [
   ["▦", "Resumen", "/dashboard"],
   ["↔", "Conexiones", "/dashboard/exchanges"],
   ["≋", "Movimientos", "/dashboard/movimientos"],
-  ["€", "Fiscalidad", "/dashboard/fiscalidad"],
+  ["€", "Renta", "/dashboard/renta"],
   ["?", "Ayuda", "/dashboard/ayuda"],
   ["⚙", "Configuración", "/dashboard/configuracion"],
 ] as const;
