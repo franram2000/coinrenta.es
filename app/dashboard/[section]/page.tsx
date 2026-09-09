@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { addExchangeConnection, createImportRecord, updateProfile } from "../actions";
 
@@ -95,7 +96,7 @@ export default async function DashboardSection({ params }: { params: Promise<{ s
   return <Page title={item.title} description={item.description}><div className="panel-card"><div className="panel-head"><div><span className="section-kicker">Perfil</span><h3>Datos de tu cuenta</h3></div></div><form action={updateProfile} className="form-grid"><label>Nombre visible<input name="display_name" defaultValue={profile?.display_name || ""} placeholder="Tu nombre" /></label><label>País<input value={profile?.country_code || "ES"} readOnly /></label><label>Zona horaria<input value={profile?.timezone || "Europe/Madrid"} readOnly /></label><div><button className="btn btn-primary" type="submit">Guardar cambios</button></div></form></div><div className="panel-card"><div className="panel-head"><div><span className="section-kicker">Cuenta</span><h3>{user.email}</h3></div></div><p className="section-lead">La cuenta está autenticada con Supabase. Tus consultas están aisladas por usuario mediante las políticas RLS de la base de datos.</p></div></Page>;
 }
 
-function Page({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function Page({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return <div className="app-shell"><aside className="app-sidebar"><Link className="app-logo" href="/dashboard"><span className="brand-mark">₿</span><span className="brand-name">Coin<span>Renta</span></span></Link><nav className="app-nav"><Link className="app-nav-item" href="/dashboard">▦ Resumen</Link><Link className="app-nav-item" href="/dashboard/exchanges">↔ Exchanges</Link><Link className="app-nav-item" href="/dashboard/importar">⇧ Importar CSV</Link><Link className="app-nav-item" href="/dashboard/movimientos">≋ Movimientos</Link><Link className="app-nav-item" href="/dashboard/fiscalidad">€ Fiscalidad</Link><Link className="app-nav-item" href="/dashboard/configuracion">⚙ Configuración</Link></nav></aside><main className="app-main"><header className="app-topbar"><div><span className="topbar-kicker">CoinRenta</span><h1>{title}</h1><p>{description}</p></div></header><section className="dashboard-content">{children}</section></main></div>;
 }
 
