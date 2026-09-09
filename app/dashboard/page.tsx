@@ -70,7 +70,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="panel-head"><div><h3>Consulta por fecha</h3><p>Selecciona un día para consultar el patrimonio y los activos que constaban en cartera hasta esa fecha.</p></div><span className="summary-data-note">{formatSelectedDate(requestedDate)}</span></div>
         <form className="dashboard-date-form" method="get" action="/dashboard">
           <label htmlFor="portfolio-date">Fecha</label>
-          <input id="portfolio-date" name="date" type="date" value={requestedDate} max={today} />
+          <input id="portfolio-date" name="date" type="date" defaultValue={requestedDate} max={today} />
           <button type="submit">Consultar fecha</button>
           <Link href="/dashboard">Hoy</Link>
         </form>
