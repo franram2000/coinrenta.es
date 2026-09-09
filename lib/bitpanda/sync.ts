@@ -26,13 +26,32 @@ function txTime(tx: BitpandaOperationTransaction, operation: BitpandaOperation) 
 function feeAssetId(tx: BitpandaOperationTransaction) { return tx.fee_amount?.asset_id || tx.feeAmount?.asset_id || ""; }
 
 export async function syncBitpanda({ supabase, userId, connectionId, accountId, apiKey }: { supabase: any; userId: string; connectionId: string; accountId: string; apiKey: string }) {
+  // Only two account-level calls are needed to discover the data we actually use.
+  // Do not download the complete Bitpanda asset/currency catalog: large catalogs can
+  // turn a single sync into hundreds/thousands of requests and trigger 429 throttling.
   const [portfolioResponse, operations] = await Promise.all([bitpandaApi.portfolio(apiKey), bitpandaApi.operations(apiKey)]);
   const holdings = Array.isArray(portfolioResponse) ? portfolioResponse : Array.isArray((portfolioResponse as any)?.data) ? (portfolioResponse as any).data : [];
   const operationRows = operations || [];
 
-  // The old implementation queried /assets once per external id. With a large history that can
-  // easily trigger Bitpanda's per-key rate limits. Fetch each catalog once and resolve ids locally.
-  const [assetCatalog, currencyCatalog] = await Promise.all([bitpandaApi.assets(apiKey), bitpandaApi.currencies(apiKey)]);
+  const assetIds = new Set<string>();
+  const currencyIds = new Set<string>();
+  for (const holding of holdings) {
+    const id = holding.assetId || holding.asset_id;
+    if (id) assetIds.add(id);
+    if (holding.equivalentCurrencyId) currencyIds.add(holding.equivalentCurrencyId);
+  }
+  for (const operation of operationRows) {
+    for (const tx of operationTransactions(operation)) {
+      const assetId = txAssetId(tx); const currencyId = txCurrencyId(tx); const feeId = feeAssetId(tx);
+      if (assetId) assetIds.add(assetId);
+      if (currencyId) currencyIds.add(currencyId);
+      if (feeId) assetIds.add(feeId);
+    }
+  }
+
+  // Fetch only the referenced IDs, sequentially through the API limiter.
+  const assetCatalog = assetIds.size ? await bitpandaApi.assets(apiKey, [...assetIds]) : [];
+  const currencyCatalog = currencyIds.size ? await bitpandaApi.currencies(apiKey, [...currencyIds]) : [];
 
   const symbolByExternalId = new Map<string, string>();
   const nameByExternalId = new Map<string, string>();
