@@ -16,8 +16,6 @@ const nav = [
 
 export default function DashboardSidebar({ role }: { role: string }) {
   const pathname = usePathname();
-  const plan = role === "admin" ? "Admin" : role === "pro" ? "Pro" : "Free";
-  const hasPro = role !== "free";
 
   return (
     <aside className="app-sidebar">
@@ -38,11 +36,6 @@ export default function DashboardSidebar({ role }: { role: string }) {
           </Link>
         )}
       </nav>
-      <div className="sidebar-pro-card">
-        <div className="pro-card-title"><span className="pro-crown">♛</span><strong>Plan {plan}</strong><span className="plan-active">Activo</span></div>
-        <p>{hasPro ? "Acceso completo a las funcionalidades." : "Funciones esenciales. Pásate a Pro para desbloquear informes y automatizaciones."}</p>
-        <Link className="btn btn-outline-full" href="/dashboard/configuracion">{hasPro ? "Gestionar suscripción" : "Ver Plan Pro"}</Link>
-      </div>
       <div className="sidebar-bottom"><LogoutButton /></div>
     </aside>
   );
