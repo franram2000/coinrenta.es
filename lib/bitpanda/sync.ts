@@ -50,7 +50,10 @@ export async function syncBitpanda({ supabase, userId, connectionId, accountId, 
   }
   for(const record of fiatTx as any[]){
     const a=record.attributes||{}; const symbol=fiatSymbols.get(a.fiat_wallet_id)||"EUR"; const type=a.type||"transfer";
-    rows.push({user_id:userId,account_id:accountId,external_id:`fiat:${record.id}`,occurred_at:time(a),transaction_type:type,base_asset_id:assetIds.get(symbol)||null,base_amount:signed(a.amount,a.in_or_out),quote_amount:n(a.amount)*n(a.to_eur_rate),price_currency:"EUR",raw_data:record,source:"api:bitpanda"});
+    const amount = n(a.amount);
+    const eurRate = n(a.to_eur_rate);
+    const quoteAmount = amount !== null && eurRate !== null ? amount * eurRate : null;
+    rows.push({user_id:userId,account_id:accountId,external_id:`fiat:${record.id}`,occurred_at:time(a),transaction_type:type,base_asset_id:assetIds.get(symbol)||null,base_amount:signed(a.amount,a.in_or_out),quote_amount:quoteAmount,price_currency:"EUR",raw_data:record,source:"api:bitpanda"});
   }
   for(const record of commodityTx as any[]){
     const a=record.attributes||{}; const symbol=commoditySymbols.get(a.wallet_id)||walletSymbols.get(a.wallet_id)||"UNKNOWN";
