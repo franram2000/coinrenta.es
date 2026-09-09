@@ -7,7 +7,7 @@ import { syncBitpanda } from "@/lib/bitpanda/sync";
 import { normalizeBitpandaCsv, parseBitpandaCsv } from "@/lib/bitpanda/csv";
 
 const FIAT = new Set(["EUR", "USD", "GBP", "CHF", "PLN", "SEK", "DKK", "NOK"]);
-const ALLOWED_TYPES = new Set(["buy", "sell", "trade", "deposit", "withdrawal", "transfer_in", "transfer_out", "fee", "reward", "staking", "airdrop", "interest", "cashback", "income", "expense", "other"]);
+const ALLOWED_TYPES = new Set(["buy", "sell", "deposit", "withdrawal", "transfer_in", "transfer_out", "fee", "reward", "staking", "airdrop", "interest", "cashback", "income", "expense", "other"]);
 
 function normalizeCsvType(value: string, direction: string) {
   const raw = value.toLowerCase().replace(/[ -]+/g, "_");
@@ -27,7 +27,9 @@ function normalizeCsvType(value: string, direction: string) {
 
 function signed(value: number | null, type: string, direction: string) {
   if (value === null) return null;
-  if (["sell", "withdrawal", "transfer_out", "fee", "expense"].includes(type)) return -Math.abs(value);
+  if (type === "buy") return Math.abs(value);
+  if (type === "sell") return -Math.abs(value);
+  if (["withdrawal", "transfer_out", "fee", "expense"].includes(type)) return -Math.abs(value);
   if (direction === "outgoing") return -Math.abs(value);
   return Math.abs(value);
 }
@@ -174,7 +176,9 @@ export async function addBitpandaCsvConnection(formData: FormData) {
       const baseSymbol = String(row.asset || row.fiat || "").toUpperCase();
       const quoteSymbol = String(row.fiat || "EUR").toUpperCase();
       const baseAmount = signed(row.amountAsset ?? row.amountFiat, transactionType, row.direction);
-      const quoteAmount = row.amountAsset !== null && row.amountFiat !== null ? Math.abs(row.amountFiat) : null;
+      const quoteAmount = row.amountAsset !== null && row.amountFiat !== null
+        ? transactionType === "buy" ? -Math.abs(row.amountFiat) : transactionType === "sell" ? Math.abs(row.amountFiat) : Math.abs(row.amountFiat)
+        : null;
       return {
         user_id: user.id,
         account_id: account.id,
@@ -201,13 +205,18 @@ export async function addBitpandaCsvConnection(formData: FormData) {
     }
 
     const balances = new Map<string, { quantity: number; price: number | null; capturedAt: string }>();
+    const addBalance = (assetId: string | null, amount: number | null, price: number | null, capturedAt: string) => {
+      if (!assetId || amount === null || !Number.isFinite(amount)) return;
+      const current = balances.get(assetId) || { quantity: 0, price: null, capturedAt };
+      current.quantity += Number(amount);
+      if (price !== null && Number.isFinite(price)) current.price = Number(price);
+      if (new Date(capturedAt).getTime() > new Date(current.capturedAt).getTime()) current.capturedAt = capturedAt;
+      balances.set(assetId, current);
+    };
+
     for (const row of transactions) {
-      if (!row.base_asset_id || row.base_amount === null) continue;
-      const current = balances.get(row.base_asset_id) || { quantity: 0, price: null, capturedAt: row.occurred_at };
-      current.quantity += Number(row.base_amount);
-      if (row.price !== null && String(row.price_currency || "").toUpperCase() === "EUR") current.price = Number(row.price);
-      if (new Date(row.occurred_at).getTime() > new Date(current.capturedAt).getTime()) current.capturedAt = row.occurred_at;
-      balances.set(row.base_asset_id, current);
+      addBalance(row.base_asset_id, row.base_amount, row.price_currency === "EUR" ? row.price : null, row.occurred_at);
+      addBalance(row.quote_asset_id, row.quote_amount, row.price_currency === "EUR" ? 1 : null, row.occurred_at);
     }
 
     const now = new Date().toISOString();
