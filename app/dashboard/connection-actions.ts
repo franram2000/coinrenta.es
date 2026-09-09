@@ -45,14 +45,58 @@ export async function addBitpandaApiConnection(formData: FormData) {
   });
   if (secretError) throw new Error(`No se pudo guardar la clave API: ${secretError.message}`);
 
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/exchanges");
+  return { success: true, connectionId: connection.id };
+}
+
+export async function syncBitpandaConnection(connectionId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: connection, error: connectionError } = await supabase
+    .from("exchange_connections")
+    .select("id,exchange_id,status,provider_type")
+    .eq("id", connectionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (connectionError || !connection) throw new Error("Conexión no encontrada.");
+  if (connection.provider_type !== "api") throw new Error("Esta conexión no usa API.");
+
+  const { data: account, error: accountError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("connection_id", connection.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (accountError || !account) throw new Error("Cuenta de exchange no encontrada.");
+
+  const { data: apiKey, error: keyError } = await supabase.rpc("get_exchange_api_key", {
+    p_connection_id: connection.id,
+  });
+  if (keyError || !apiKey) throw new Error(`No se pudo recuperar la clave API: ${keyError?.message || "clave no disponible"}`);
+
+  await supabase
+    .from("exchange_connections")
+    .update({ status: "pending", last_sync_status: "pending", last_sync_error: null, updated_at: new Date().toISOString() })
+    .eq("id", connection.id)
+    .eq("user_id", user.id);
+
   try {
-    await syncBitpanda({
+    const result = await syncBitpanda({
       supabase,
       userId: user.id,
       connectionId: connection.id,
       accountId: account.id,
-      apiKey,
+      apiKey: String(apiKey),
     });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/exchanges");
+    revalidatePath("/dashboard/movimientos");
+    revalidatePath("/dashboard/fiscalidad");
+    return { success: true, ...result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo sincronizar Bitpanda.";
     await supabase
@@ -60,12 +104,8 @@ export async function addBitpandaApiConnection(formData: FormData) {
       .update({ status: "error", last_sync_status: "error", last_sync_error: message, updated_at: new Date().toISOString() })
       .eq("id", connection.id)
       .eq("user_id", user.id);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/exchanges");
     throw new Error(message);
   }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/exchanges");
-  revalidatePath("/dashboard/movimientos");
-  revalidatePath("/dashboard/fiscalidad");
-  return { success: true };
 }
