@@ -7,6 +7,19 @@ export const metadata: Metadata = { title: "Resumen", description: "Resumen patr
 export const dynamic = "force-dynamic";
 
 type Period = "7d" | "30d" | "3m" | "1y" | "all";
+type Asset = { symbol?: string | null; name?: string | null };
+type Exchange = { name?: string | null; code?: string | null };
+type Connection = {
+  id?: string;
+  label?: string | null;
+  provider_type?: string | null;
+  exchange?: Exchange | Exchange[] | null;
+};
+type Account = {
+  id?: string;
+  name?: string | null;
+  connection?: Connection | Connection[] | null;
+};
 type Snapshot = {
   id?: string;
   captured_at: string;
@@ -14,17 +27,8 @@ type Snapshot = {
   quantity: number | string | null;
   price_eur?: number | string | null;
   source?: string | null;
-  asset?: { symbol?: string | null; name?: string | null } | { symbol?: string | null; name?: string | null }[] | null;
-  account?: {
-    id?: string;
-    name?: string | null;
-    connection?: {
-      id?: string;
-      label?: string | null;
-      provider_type?: string | null;
-      exchange?: { name?: string | null; code?: string | null } | { name?: string | null; code?: string | null }[] | null;
-    } | { id?: string; label?: string | null; provider_type?: string | null; exchange?: { name?: string | null; code?: string | null } | { name?: string | null; code?: string | null }[] | null }[] | null;
-  } | { id?: string; name?: string | null; connection?: unknown }[] | null;
+  asset?: Asset | Asset[] | null;
+  account?: Account | Account[] | null;
 };
 type ExchangeAsset = { symbol: string; value: number };
 type ExchangeBreakdown = { key: string; name: string; code: string; value: number; assets: ExchangeAsset[] };
