@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,42 +17,47 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setMessage(null);
     setError(null);
 
-    const supabase = createClient();
-    const origin = window.location.origin;
+    try {
+      const supabase = createClient();
+      const origin = window.location.origin;
 
-    if (isRegister) {
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { display_name: displayName.trim() || null },
-          emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
-        },
-      });
+      if (isRegister) {
+        const { data, error: signupError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { display_name: displayName.trim() || null },
+            emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+          },
+        });
 
-      if (signupError) {
-        setError(signupError.message);
-      } else if (data.session) {
+        if (signupError) {
+          setError(signupError.message || "No hemos podido crear la cuenta.");
+        } else if (data.session) {
+          window.location.assign("/dashboard");
+          return;
+        } else {
+          setMessage("Cuenta creada. Revisa tu correo para confirmar la dirección antes de entrar.");
+        }
+      } else {
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (loginError) {
+          setError("Correo o contraseña incorrectos.");
+          return;
+        }
         window.location.assign("/dashboard");
         return;
-      } else {
-        setMessage("Cuenta creada. Revisa tu correo para confirmar la dirección antes de entrar.");
       }
-    } else {
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-      if (loginError) {
-        setError("Correo o contraseña incorrectos.");
-      } else {
-        window.location.assign("/dashboard");
-        return;
-      }
+    } catch {
+      setError(isRegister ? "No hemos podido crear la cuenta. Comprueba tu conexión e inténtalo de nuevo." : "No hemos podido iniciar sesión. Comprueba tu conexión e inténtalo de nuevo.");
+    } finally {
+      setPending(false);
     }
-
-    setPending(false);
   }
 
   return (
@@ -70,6 +76,12 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         <span>Contraseña</span>
         <input name="password" type="password" autoComplete={isRegister ? "new-password" : "current-password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
       </label>
+
+      {!isRegister && (
+        <div className="auth-password-link">
+          <Link href="/recuperar">¿Has olvidado tu contraseña?</Link>
+        </div>
+      )}
 
       {error && <p className="form-alert form-alert-error" role="alert">{error}</p>}
       {message && <p className="form-alert form-alert-success" role="status">{message}</p>}
