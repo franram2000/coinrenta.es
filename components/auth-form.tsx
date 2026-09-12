@@ -78,8 +78,13 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       </label>
 
       {!isRegister && (
-        <div className="auth-password-link">
-          <Link href="/recuperar">¿Has olvidado tu contraseña?</Link>
+        <div style={{ marginTop: -6, marginBottom: 4, textAlign: "right" }}>
+          <Link
+            href="/recuperar"
+            style={{ color: "#16b8ae", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
+          >
+            ¿Has olvidado tu contraseña?
+          </Link>
         </div>
       )}
 
