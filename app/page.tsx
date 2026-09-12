@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
 const exchanges = ["BINANCE", "COINBASE", "KRAKEN", "BITPANDA", "BITSTAMP", "CSV / API"];
 const movements = [
@@ -12,11 +10,7 @@ const movements = [
   ["FEE", "BNB", "−8,40 €"],
 ];
 
-export default async function Home() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (data?.claims?.sub) redirect("/dashboard");
-
+export default function Home() {
   return (
     <div className="landing-v2">
       <link rel="stylesheet" href="/landing.css" />
