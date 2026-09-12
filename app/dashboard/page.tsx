@@ -7,7 +7,27 @@ export const metadata: Metadata = { title: "Resumen", description: "Resumen patr
 export const dynamic = "force-dynamic";
 
 type Period = "7d" | "30d" | "3m" | "1y" | "all";
-type Snapshot = any;
+type Snapshot = {
+  id?: string;
+  captured_at: string;
+  value_eur: number | string | null;
+  quantity: number | string | null;
+  price_eur?: number | string | null;
+  source?: string | null;
+  asset?: { symbol?: string | null; name?: string | null } | { symbol?: string | null; name?: string | null }[] | null;
+  account?: {
+    id?: string;
+    name?: string | null;
+    connection?: {
+      id?: string;
+      label?: string | null;
+      provider_type?: string | null;
+      exchange?: { name?: string | null; code?: string | null } | { name?: string | null; code?: string | null }[] | null;
+    } | { id?: string; label?: string | null; provider_type?: string | null; exchange?: { name?: string | null; code?: string | null } | { name?: string | null; code?: string | null }[] | null }[] | null;
+  } | { id?: string; name?: string | null; connection?: unknown }[] | null;
+};
+type ExchangeAsset = { symbol: string; value: number };
+type ExchangeBreakdown = { key: string; name: string; code: string; value: number; assets: ExchangeAsset[] };
 
 function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
 function eur(value: number) { return Number.isFinite(value) ? value.toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }) : "—"; }
@@ -30,8 +50,8 @@ function latestPositions(rows: Snapshot[]) {
   }
   return result;
 }
-function buildExchanges(current: Snapshot[]) {
-  const exchanges = new Map<string, any>();
+function buildExchanges(current: Snapshot[]): ExchangeBreakdown[] {
+  const exchanges = new Map<string, { key: string; name: string; code: string; value: number; assets: Map<string, number> }>();
   for (const item of current) {
     const account = one(item.account); const connection = one(account?.connection); const exchange = one(connection?.exchange);
     const key = connection?.id || `${exchange?.code || "other"}:${account?.name || "account"}`;
@@ -41,7 +61,7 @@ function buildExchanges(current: Snapshot[]) {
     const row = exchanges.get(key) || { key, name: exchange?.name || connection?.label || "Sin exchange", code: exchange?.code || "—", value: 0, assets: new Map<string, number>() };
     row.value += value; row.assets.set(symbol, (row.assets.get(symbol) || 0) + value); exchanges.set(key, row);
   }
-  return [...exchanges.values()].map((exchange) => ({ ...exchange, assets: [...exchange.assets.entries()].map(([symbol, value]) => ({ symbol, value })).sort((a, b) => b.value - a.value) })).sort((a, b) => b.value - a.value);
+  return [...exchanges.values()].map((exchange): ExchangeBreakdown => ({ ...exchange, assets: [...exchange.assets.entries()].map(([symbol, value]) => ({ symbol, value })).sort((a, b) => b.value - a.value) })).sort((a, b) => b.value - a.value);
 }
 function donutStyle(values: number[]) {
   const total = values.reduce((sum, value) => sum + value, 0);
@@ -68,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const name = profile?.display_name || user.email?.split("@")[0] || "usuario";
   const initials = name.slice(0, 1).toUpperCase();
-  const latest = latestPositions(snapshots || []);
+  const latest = latestPositions((snapshots || []) as Snapshot[]);
   const currentRows = [...latest.values()].filter((row: Snapshot) => { const q = Number(row.quantity); const symbol = String(one(row.asset)?.symbol || "").trim(); return Number.isFinite(q) && Math.abs(q) > 1e-12 && symbol && symbol !== "-"; });
   const valuedRows = currentRows.filter((row: Snapshot) => Number.isFinite(Number(row.value_eur)));
   const total = valuedRows.reduce((sum, row) => sum + Number(row.value_eur), 0);
