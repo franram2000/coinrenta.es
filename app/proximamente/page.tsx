@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import "../error-pages.css";
+import "./proximamente.css";
 
 export const metadata: Metadata = {
   title: "Próximamente",
