@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const CONSENT_KEY = "coinrenta_cookie_consent_v2";
+const CONSENT_VERSION = "2026-09-14-v1";
 const CONSENT_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
 
 type Consent = {
   analytics: boolean;
   savedAt: number;
+  version: string;
 };
 
 function readConsent(): Consent | null {
@@ -16,12 +18,12 @@ function readConsent(): Consent | null {
     const raw = window.localStorage.getItem(CONSENT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<Consent>;
-    if (typeof parsed.analytics !== "boolean" || typeof parsed.savedAt !== "number") return null;
+    if (typeof parsed.analytics !== "boolean" || typeof parsed.savedAt !== "number" || parsed.version !== CONSENT_VERSION) return null;
     if (Date.now() - parsed.savedAt > CONSENT_MAX_AGE_MS) {
       window.localStorage.removeItem(CONSENT_KEY);
       return null;
     }
-    return { analytics: parsed.analytics, savedAt: parsed.savedAt };
+    return { analytics: parsed.analytics, savedAt: parsed.savedAt, version: parsed.version };
   } catch {
     return null;
   }
@@ -44,7 +46,7 @@ function clearAnalyticsCookies() {
 }
 
 function saveConsent(analytics: boolean) {
-  const consent: Consent = { analytics, savedAt: Date.now() };
+  const consent: Consent = { analytics, savedAt: Date.now(), version: CONSENT_VERSION };
   window.localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
   window.dispatchEvent(new CustomEvent("coinrenta-cookie-consent", { detail: consent }));
   if (!analytics) clearAnalyticsCookies();
@@ -89,6 +91,9 @@ export default function CookieConsent() {
 
   useEffect(() => {
     const current = readConsent();
+    if (!current) {
+      window.localStorage.removeItem(CONSENT_KEY);
+    }
     setConsent(current);
     setAnalyticsChoice(current?.analytics ?? false);
   }, []);
@@ -96,7 +101,7 @@ export default function CookieConsent() {
   function apply(analytics: boolean) {
     const savedAt = Date.now();
     saveConsent(analytics);
-    setConsent({ analytics, savedAt });
+    setConsent({ analytics, savedAt, version: CONSENT_VERSION });
     setAnalyticsChoice(analytics);
     setSettingsOpen(false);
   }
