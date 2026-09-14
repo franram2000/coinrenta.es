@@ -2,7 +2,8 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { importCsvConnection, refreshCsvConnections } from "./csv-actions";
+import { importKrakenCsvConnection, refreshWithKrakenBalances } from "./kraken-balance-actions";
+import { importCsvConnection } from "./csv-actions";
 
 const CSV_CODES = new Set(["bitpanda", "binance", "coinbase", "kraken", "crypto.com", "cryptocom", "kucoin", "bybit", "okx"]);
 type Exchange = { id: string; code: string; name: string; website: string | null };
@@ -33,10 +34,11 @@ export default function ExchangeManager({ exchanges }: Props) {
   function submitCsv(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const isKraken = selected?.code.toLowerCase() === "kraken";
     setError(null); setMessage("Importando y comprobando tus CSV…");
     startTransition(async () => {
       try {
-        const result = await importCsvConnection(data);
+        const result = isKraken ? await importKrakenCsvConnection(data) : await importCsvConnection(data);
         router.refresh(); setOpen(false); setSelected(null);
         setMessage(`✓ ${result.rows.toLocaleString("es-ES")} movimientos importados desde ${result.files} archivo(s).`);
         window.setTimeout(() => setMessage(null), 3000);
@@ -46,9 +48,9 @@ export default function ExchangeManager({ exchanges }: Props) {
     });
   }
   function refresh() {
-    setError(null); setMessage("Actualizando la vista…");
+    setError(null); setMessage("Recalculando saldos y actualizando la vista…");
     startTransition(async () => {
-      try { await refreshCsvConnections(); router.refresh(); setMessage("✓ Vista actualizada."); window.setTimeout(() => setMessage(null), 1200); }
+      try { await refreshWithKrakenBalances(); router.refresh(); setMessage("✓ Saldos y vista actualizados."); window.setTimeout(() => setMessage(null), 1600); }
       catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar."); setMessage(null); }
     });
   }
