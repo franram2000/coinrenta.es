@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { importKrakenCsvConnection, refreshWithKrakenBalances } from "./kraken-balance-actions";
 import { importCsvConnection } from "./csv-actions";
+import { repairAllCsvBalances } from "./balance-repair";
 
 const CSV_CODES = new Set(["bitpanda", "binance", "coinbase", "kraken", "crypto.com", "cryptocom", "kucoin", "bybit", "okx"]);
 type Exchange = { id: string; code: string; name: string; website: string | null };
@@ -35,12 +36,13 @@ export default function ExchangeManager({ exchanges }: Props) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const isKraken = selected?.code.toLowerCase() === "kraken";
-    setError(null); setMessage("Importando y comprobando tus CSV…");
+    setError(null); setMessage("Importando, corrigiendo saldos y comprobando tus CSV…");
     startTransition(async () => {
       try {
         const result = isKraken ? await importKrakenCsvConnection(data) : await importCsvConnection(data);
+        await repairAllCsvBalances();
         router.refresh(); setOpen(false); setSelected(null);
-        setMessage(`✓ ${result.rows.toLocaleString("es-ES")} movimientos importados desde ${result.files} archivo(s).`);
+        setMessage(`✓ ${result.rows.toLocaleString("es-ES")} movimientos importados y saldos recalculados.`);
         window.setTimeout(() => setMessage(null), 3000);
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo importar el CSV."); setMessage(null); router.refresh();
@@ -50,7 +52,7 @@ export default function ExchangeManager({ exchanges }: Props) {
   function refresh() {
     setError(null); setMessage("Recalculando saldos y actualizando la vista…");
     startTransition(async () => {
-      try { await refreshWithKrakenBalances(); router.refresh(); setMessage("✓ Saldos y vista actualizados."); window.setTimeout(() => setMessage(null), 1600); }
+      try { await refreshWithKrakenBalances(); await repairAllCsvBalances(); router.refresh(); setMessage("✓ Saldos y vista actualizados."); window.setTimeout(() => setMessage(null), 1600); }
       catch (err) { setError(err instanceof Error ? err.message : "No se pudo actualizar."); setMessage(null); }
     });
   }
