@@ -3,6 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+async function requireAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (profile?.role !== "admin") throw new Error("No autorizado");
+
+  return { user, supabase };
+}
 
 export async function deleteExchangeConnection(formData: FormData) {
   const supabase = await createClient();
@@ -42,16 +60,34 @@ export async function updateProfile(formData: FormData) {
 }
 
 export async function adminUpdateUser(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (me?.role !== "admin") throw new Error("No autorizado");
-  const targetId = String(formData.get("user_id") || "");
-  const role = String(formData.get("role") || "free");
+  const { user } = await requireAdmin();
+  const targetId = String(formData.get("user_id") || "").trim();
+  const role = String(formData.get("role") || "free").trim();
   const isActive = String(formData.get("is_active") || "true") === "true";
-  if (!targetId || !["free", "pro", "admin"].includes(role)) return;
-  const { error } = await supabase.from("profiles").update({ role, is_active: isActive }).eq("id", targetId);
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard/usuarios"); revalidatePath("/dashboard");
+
+  if (!targetId) throw new Error("Usuario no encontrado");
+  if (!["free", "pro", "admin"].includes(role)) throw new Error("Plan/rol no válido");
+  if (targetId === user.id && role !== "admin") throw new Error("No puedes quitarte tus permisos de administrador desde tu propia cuenta.");
+  if (targetId === user.id && !isActive) throw new Error("No puedes desactivar tu propia cuenta de administrador.");
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("profiles").update({ role, is_active: isActive }).eq("id", targetId);
+  if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
+
+  revalidatePath("/dashboard/usuarios");
+  revalidatePath("/dashboard");
+}
+
+export async function adminDeleteUser(formData: FormData) {
+  const { user } = await requireAdmin();
+  const targetId = String(formData.get("user_id") || "").trim();
+  if (!targetId) throw new Error("Usuario no encontrado");
+  if (targetId === user.id) throw new Error("No puedes eliminar tu propia cuenta de administrador.");
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(targetId, false);
+  if (error) throw new Error(`No se pudo eliminar el usuario: ${error.message}`);
+
+  revalidatePath("/dashboard/usuarios");
+  revalidatePath("/dashboard");
 }
