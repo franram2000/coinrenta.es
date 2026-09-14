@@ -39,7 +39,7 @@ export default function PasswordResetForm() {
         setError(friendlyError(updateError.message));
         return;
       }
-      router.replace("/login?password=updated");
+      router.replace("/cambio-contrasena-exitoso");
     } catch {
       setError("No hemos podido actualizar la contraseña. Solicita un nuevo enlace e inténtalo de nuevo.");
     } finally {
