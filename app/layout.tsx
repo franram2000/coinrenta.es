@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./landing.css";
+import "./cookies.css";
 import CookieNotice from "@/components/cookie-notice";
 
 const siteUrl = "https://coinrenta.es";
