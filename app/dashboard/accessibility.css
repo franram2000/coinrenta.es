@@ -1,0 +1,102 @@
+.dashboard-pro-shell,.app-shell{font-size:15px}.dashboard-pro-shell p,.app-shell p{line-height:1.6}
+/* Legibilidad global del dashboard: evitamos textos funcionales por debajo de un tamaño cómodo. */
+.dashboard-pro-shell .section-kicker,.app-shell .section-kicker{font-size:12px!important;line-height:1.35!important;letter-spacing:.045em}
+.dashboard-pro-shell .stat-label,.app-shell .stat-label{font-size:12px!important;line-height:1.45!important}
+.dashboard-pro-shell .stat-note,.app-shell .stat-note{font-size:11px!important;line-height:1.45!important}
+.dashboard-pro-shell .panel-head h3,.app-shell .panel-head h3{font-size:17px!important;line-height:1.35!important}
+.dashboard-pro-shell .panel-head p,.app-shell .panel-head p{font-size:12px!important;line-height:1.55!important}
+.dashboard-pro-shell .panel-link,.app-shell .panel-link{font-size:12px!important}
+.dashboard-pro-shell .summary-data-note,.app-shell .summary-data-note{font-size:12px!important;line-height:1.5!important}
+.dashboard-pro-shell table th,.app-shell table th{font-size:11px!important;line-height:1.4!important}
+.dashboard-pro-shell table td,.app-shell table td{font-size:13px!important;line-height:1.45!important}
+.dashboard-pro-shell .table-subtext,.app-shell .table-subtext{font-size:11px!important;line-height:1.4!important}
+.dashboard-pro-shell .table-warning,.app-shell .table-warning{font-size:11px!important;line-height:1.4!important}
+.dashboard-pro-shell .data-row,.app-shell .data-row{font-size:13px}
+.dashboard-pro-shell .data-row span,.app-shell .data-row span{font-size:12px}
+.dashboard-pro-shell .connected-exchange-info small,.app-shell .connected-exchange-info small{font-size:11px!important}
+.dashboard-pro-shell .connected-exchange-info strong,.app-shell .connected-exchange-info strong{font-size:13px!important}
+.dashboard-pro-shell .connected-exchange-footer,.app-shell .connected-exchange-footer{font-size:12px!important}
+.dashboard-pro-shell .connected-exchange-footer small,.app-shell .connected-exchange-footer small{font-size:11px!important}
+.dashboard-pro-shell .connection-status,.app-shell .connection-status{font-size:11px!important}
+.dashboard-pro-shell .info-grid span,.app-shell .info-grid span{font-size:12px!important;line-height:1.6!important}
+.dashboard-pro-shell .info-grid strong,.app-shell .info-grid strong{font-size:14px!important}
+.dashboard-pro-shell .form-grid label,.app-shell .form-grid label{font-size:12px!important;line-height:1.5!important}
+.dashboard-pro-shell input,.dashboard-pro-shell select,.app-shell input,.app-shell select{font-size:14px!important;min-height:42px}
+.dashboard-pro-shell button,.app-shell button{font-size:13px}
+.dashboard-pro-shell .empty-state,.app-shell .empty-state{font-size:13px}
+.dashboard-pro-shell .empty-state p,.app-shell .empty-state p{font-size:12px!important}
+.dashboard-pro-shell .renta-page,.app-shell .renta-page{font-size:15px}
+.dashboard-pro-shell .renta-hero p,.app-shell .renta-hero p{font-size:14px!important;line-height:1.65!important}
+.dashboard-pro-shell .renta-summary-grid small,.app-shell .renta-summary-grid small{font-size:12px!important}
+.dashboard-pro-shell .renta-summary-grid strong,.app-shell .renta-summary-grid strong{font-size:18px!important}
+.dashboard-pro-shell .renta-explanation span,.dashboard-pro-shell .renta-note,.app-shell .renta-explanation span,.app-shell .renta-note{font-size:13px!important;line-height:1.7!important}
+.dashboard-pro-shell .renta-table-wrap th,.app-shell .renta-table-wrap th{font-size:11px!important}
+.dashboard-pro-shell .renta-table-wrap td,.app-shell .renta-table-wrap td{font-size:13px!important}
+.dashboard-pro-shell .renta-table-wrap td small,.app-shell .renta-table-wrap td small{font-size:11px!important}
+.dashboard-pro-shell .renta-data-foot,.app-shell .renta-data-foot{font-size:12px!important}
+.dashboard-pro-shell .renta-warning-inline,.app-shell .renta-warning-inline{font-size:12px!important;line-height:1.5!important}
+.dashboard-pro-shell .renta-provisional span,.app-shell .renta-provisional span{font-size:13px!important;line-height:1.7!important}
+.dashboard-pro-shell .renta-disclaimer p,.app-shell .renta-disclaimer p{font-size:13px!important;line-height:1.75!important}
+.dashboard-pro-shell .quality-group-head h4,.app-shell .quality-group-head h4{font-size:15px!important;line-height:1.4!important}
+.dashboard-pro-shell .quality-count,.app-shell .quality-count{font-size:12px!important}
+.dashboard-pro-shell .quality-issue-copy strong,.app-shell .quality-issue-copy strong{font-size:13px!important;line-height:1.45!important}
+.dashboard-pro-shell .quality-issue-copy small,.app-shell .quality-issue-copy small{font-size:12px!important;line-height:1.55!important}
+.dashboard-pro-shell .quality-sale-main strong,.app-shell .quality-sale-main strong{font-size:13px!important}
+.dashboard-pro-shell .quality-sale-main span,.app-shell .quality-sale-main span{font-size:11px!important}
+.dashboard-pro-shell .quality-sale-detail,.app-shell .quality-sale-detail{font-size:11px!important;line-height:1.55!important}
+.dashboard-pro-shell .quality-action,.app-shell .quality-action{font-size:12px!important}
+.dashboard-pro-shell .quality-help strong,.app-shell .quality-help strong{font-size:11px!important}
+.dashboard-pro-shell .quality-help span,.app-shell .quality-help span{font-size:11px!important;line-height:1.65!important}
+.dashboard-pro-shell .quality-pro-locked span,.app-shell .quality-pro-locked span{font-size:13px!important;line-height:1.65!important}
+.dashboard-pro-shell .renta-ready strong,.app-shell .renta-ready strong{font-size:13px!important}
+.dashboard-pro-shell .renta-ready span,.app-shell .renta-ready span{font-size:12px!important;line-height:1.65!important}
+.dashboard-pro-shell .pro-summary-heading strong,.app-shell .pro-summary-heading strong{font-size:14px!important}
+.dashboard-pro-shell .pro-summary-heading span,.app-shell .pro-summary-heading span{font-size:11px!important}
+.dashboard-pro-shell .pro-summary-card li,.app-shell .pro-summary-card li{font-size:12px!important;line-height:1.5!important}
+.dashboard-pro-shell .quick-grid span,.app-shell .quick-grid span{font-size:11px!important}
+.dashboard-pro-shell .exchange-table-head,.app-shell .exchange-table-head{font-size:11px!important}
+.dashboard-pro-shell .exchange-table-row,.app-shell .exchange-table-row{font-size:13px!important}
+.dashboard-pro-shell .exchange-name small,.app-shell .exchange-name small{font-size:11px!important}
+.dashboard-pro-shell .recent-row strong,.app-shell .recent-row strong{font-size:12px!important}
+.dashboard-pro-shell .recent-row small,.app-shell .recent-row small{font-size:11px!important}
+.dashboard-pro-shell .dashboard-footer-trust strong,.app-shell .dashboard-footer-trust strong{font-size:11px!important;line-height:1.45!important}
+.dashboard-pro-shell .dashboard-footer-trust small,.app-shell .dashboard-footer-trust small{font-size:10px!important;line-height:1.45!important}
+.dashboard-pro-shell .dashboard-disclaimer,.app-shell .dashboard-disclaimer{font-size:11px!important;line-height:1.55!important}
+
+/* Menú móvil: botón flotante + cajón lateral. La navegación inferior desaparece completamente. */
+.mobile-menu-toggle{display:none}
+.mobile-menu-overlay{display:none}
+.mobile-menu-panel{display:none}
+@media (max-width:760px){
+  .dashboard-pro-shell .app-sidebar,.app-shell .app-sidebar{display:none!important}
+  .dashboard-pro-shell .app-main,.app-shell .app-main{margin-left:0!important;padding-bottom:18px!important}
+  .mobile-menu-toggle{position:fixed;top:14px;right:14px;z-index:120;display:grid;place-items:center;width:46px;height:46px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(8,16,29,.96);color:#eef5fb;box-shadow:0 10px 30px rgba(0,0,0,.28);cursor:pointer;backdrop-filter:blur(14px)}
+  .mobile-menu-toggle span,.mobile-menu-toggle span::before,.mobile-menu-toggle span::after{display:block;width:20px;height:2px;border-radius:2px;background:currentColor;content:""}
+  .mobile-menu-toggle span{position:relative}
+  .mobile-menu-toggle span::before{position:absolute;top:-7px}
+  .mobile-menu-toggle span::after{position:absolute;top:7px}
+  .mobile-menu-overlay{position:fixed;inset:0;z-index:110;display:block;background:rgba(0,0,0,.54);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s ease}
+  .mobile-menu-overlay.open{opacity:1;pointer-events:auto}
+  .mobile-menu-panel{position:fixed;inset:0 auto 0 0;z-index:115;display:flex;width:min(330px,88vw);padding:20px 16px calc(20px + env(safe-area-inset-bottom));flex-direction:column;background:linear-gradient(180deg,#0a1424,#07101d);border-right:1px solid rgba(255,255,255,.1);box-shadow:18px 0 45px rgba(0,0,0,.35);transform:translateX(-105%);transition:transform .22s ease;overflow-y:auto}
+  .mobile-menu-panel.open{transform:translateX(0)}
+  .mobile-menu-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;padding:2px 4px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .mobile-menu-head .coinrenta-logo{display:flex!important;padding:0;gap:9px}
+  .mobile-menu-head .coinrenta-logo-mark{width:36px;height:36px}
+  .mobile-menu-head .coinrenta-logo-text{font-size:21px}
+  .mobile-menu-close{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(255,255,255,.03);color:#e8eff6;font-size:27px;line-height:1;cursor:pointer}
+  .mobile-menu-label{margin:0 6px 8px;color:#788ca6;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .mobile-menu-nav{display:grid;gap:5px}
+  .mobile-menu-nav .app-nav-item{min-height:50px;display:flex;align-items:center;gap:13px;padding:0 14px;border-radius:11px;color:#aebaca;font-size:15px;font-weight:700;text-decoration:none}
+  .mobile-menu-nav .app-nav-item span{width:22px;text-align:center;font-size:18px}
+  .mobile-menu-nav .app-nav-item.active{color:#13c9bf;background:linear-gradient(90deg,rgba(15,167,160,.18),rgba(15,167,160,.05));box-shadow:inset 2px 0 #0fa7a0}
+  .mobile-menu-logout{margin-top:auto;padding-top:18px}
+  .mobile-menu-logout .logout-button{width:100%}
+  .dashboard-pro-shell .dashboard-search,.app-shell .dashboard-search{max-width:calc(100% - 58px)}
+  .dashboard-pro-shell .dashboard-modern-content,.app-shell .dashboard-modern-content{padding-top:18px}
+  .dashboard-pro-shell .app-topbar,.app-shell .app-topbar{padding-right:62px}
+  .dashboard-pro-shell .app-topbar h1,.app-shell .app-topbar h1{font-size:26px!important;line-height:1.15!important}
+  .dashboard-pro-shell .app-topbar p,.app-shell .app-topbar p{font-size:13px!important;line-height:1.6!important}
+  .dashboard-pro-shell .renta-hero h2,.app-shell .renta-hero h2{font-size:21px!important}
+  .dashboard-pro-shell .renta-year-switcher a,.app-shell .renta-year-switcher a{font-size:13px!important;padding:9px 11px}
+  .dashboard-pro-shell .renta-summary-grid strong,.app-shell .renta-summary-grid strong{font-size:17px!important}
+}
