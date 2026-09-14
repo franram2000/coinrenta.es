@@ -25,8 +25,6 @@ function number(value: unknown) {
   return negative ? -Math.abs(result) : result;
 }
 
-function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
-
 async function requireUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -86,18 +84,11 @@ async function resolveAssetId(supabase: any, symbol: string, cache: Map<string, 
 }
 
 async function repairAccount(supabase: any, userId: string, accountId: string, exchangeCode: string) {
-  const { data: rows, error } = await supabase
-    .from("transactions")
-    .select("id,base_asset_id,base_amount,quote_asset_id,quote_amount,fee_asset_id,fee_amount,price,price_currency,occurred_at,raw_data")
-    .eq("user_id", userId)
-    .eq("account_id", accountId)
-    .order("occurred_at", { ascending: true });
+  const { data: rows, error } = await supabase.from("transactions").select("id,base_asset_id,base_amount,quote_asset_id,quote_amount,fee_asset_id,fee_amount,price,price_currency,occurred_at,raw_data").eq("user_id", userId).eq("account_id", accountId).order("occurred_at", { ascending: true });
   if (error) throw new Error(`No se pudieron cargar los movimientos: ${error.message}`);
 
   const ids = [...new Set((rows || []).flatMap((row: AnyRecord) => [row.base_asset_id, row.quote_asset_id, row.fee_asset_id].filter(Boolean)))];
-  const { data: assets, error: assetError } = ids.length
-    ? await supabase.from("assets").select("id,symbol").in("id", ids)
-    : { data: [], error: null };
+  const { data: assets, error: assetError } = ids.length ? await supabase.from("assets").select("id,symbol").in("id", ids) : { data: [], error: null };
   if (assetError) throw new Error(`No se pudieron resolver los activos: ${assetError.message}`);
   const assetById = new Map<string, string>((assets || []).map((asset: AnyRecord) => [String(asset.id), String(asset.symbol).toUpperCase()]));
 
@@ -111,11 +102,7 @@ async function repairAccount(supabase: any, userId: string, accountId: string, e
     const sourceRow = (raw.row && typeof raw.row === "object" ? raw.row : {}) as Record<string, string>;
     const sourceFile = String(raw.sourceFile || "");
     let movement: NormalizedMovement | null = null;
-    try {
-      if (Object.keys(sourceRow).length) movement = normalizeExchangeCsv(exchangeCode, [sourceRow], sourceFile)[0] || null;
-    } catch {
-      movement = null;
-    }
+    try { if (Object.keys(sourceRow).length) movement = normalizeExchangeCsv(exchangeCode, [sourceRow], sourceFile)[0] || null; } catch { movement = null; }
 
     let idsForRow = { base: tx.base_asset_id ? String(tx.base_asset_id) : null, quote: tx.quote_asset_id ? String(tx.quote_asset_id) : null, fee: tx.fee_asset_id ? String(tx.fee_asset_id) : null };
     if (movement) {
@@ -150,28 +137,23 @@ async function repairAccount(supabase: any, userId: string, accountId: string, e
       }
       parsedRows.push({ sequence, at: Number.isFinite(at) ? at : 0, movement, ids: idsForRow, raw });
     } else {
-      parsedRows.push({
-        sequence,
-        at: new Date(String(tx.occurred_at || "")).getTime() || 0,
-        movement: {
-          externalId: String(tx.id), occurredAt: String(tx.occurred_at || ""), transactionType: String(tx.transaction_type || "other"), originalType: "stored", direction: "neutral",
-          baseAsset: assetById.get(String(tx.base_asset_id)) || null, baseAmount: number(tx.base_amount), quoteAsset: assetById.get(String(tx.quote_asset_id)) || null, quoteAmount: number(tx.quote_amount),
-          feeAsset: assetById.get(String(tx.fee_asset_id)) || null, feeAmount: number(tx.fee_amount), price: number(tx.price), priceCurrency: String(tx.price_currency || "") || null, classification: "classified", raw: { sourceFile, sourceExchange: exchangeCode, row: sourceRow, parser: "stored" },
-        }, ids: idsForRow, raw,
-      });
+      parsedRows.push({ sequence, at: new Date(String(tx.occurred_at || "")).getTime() || 0, movement: {
+        externalId: String(tx.id), occurredAt: String(tx.occurred_at || ""), transactionType: String(tx.transaction_type || "other"), originalType: "stored", direction: "neutral",
+        baseAsset: assetById.get(String(tx.base_asset_id)) || null, baseAmount: number(tx.base_amount), quoteAsset: assetById.get(String(tx.quote_asset_id)) || null, quoteAmount: number(tx.quote_amount),
+        feeAsset: assetById.get(String(tx.fee_asset_id)) || null, feeAmount: number(tx.fee_amount), price: number(tx.price), priceCurrency: String(tx.price_currency || "") || null, classification: "classified", raw: { sourceFile, sourceExchange: exchangeCode, row: sourceRow, parser: "stored" },
+      }, ids: idsForRow, raw });
     }
   }
 
-  // Use the latest official/reported balance as an anchor and apply only movements after it.
-  // This prevents a partial ledger export from manufacturing a second copy of the portfolio.
+  // For assets with an official/reporting balance, use the last reported value as the anchor
+  // and apply only transactions that happened after that anchor. For assets without such a
+  // column (for example Bitpanda History), reconstruct the balance from each movement exactly once.
   for (const row of parsedRows) {
     for (const [assetId, amount] of [[row.ids.base, row.movement.baseAmount], [row.ids.quote, row.movement.quoteAmount], [row.ids.fee, row.movement.feeAmount]] as [string | null, number | null][]) {
       if (!assetId || amount === null || !Number.isFinite(amount)) continue;
       const symbol = assetById.get(assetId) || "";
       const anchor = reported.get(symbol);
-      if (!anchor || row.at > anchor.at || (row.at === anchor.at && row.sequence > anchor.sequence)) {
-        addPosition(positions, assetId, amount, symbol, row.movement.price, row.movement.priceCurrency);
-      }
+      if (!anchor || row.at > anchor.at || (row.at === anchor.at && row.sequence > anchor.sequence)) addPosition(positions, assetId, amount, symbol, row.movement.price, row.movement.priceCurrency);
     }
   }
 
@@ -182,31 +164,10 @@ async function repairAccount(supabase: any, userId: string, accountId: string, e
     positions.set(assetId, { quantity: anchor.quantity + (current?.quantity || 0), priceEur: FIAT.has(symbol) ? 1 : anchor.priceEur ?? current?.priceEur ?? null });
   }
 
-  // Exchanges whose exports do not contain running balances (notably Bitpanda history and trade-only files)
-  // are reconstructed from every normalized movement.
-  if (!reported.size) {
-    for (const row of parsedRows) {
-      addPosition(positions, row.ids.base, row.movement.baseAmount, row.movement.baseAsset || "", row.movement.price, row.movement.priceCurrency);
-      addPosition(positions, row.ids.quote, row.movement.quoteAmount, row.movement.quoteAsset || "", null, null);
-      addPosition(positions, row.ids.fee, row.movement.feeAmount, row.movement.feeAsset || "", null, null);
-    }
-  }
-
   const { error: deleteError } = await supabase.from("balance_snapshots").delete().eq("user_id", userId).eq("account_id", accountId).eq("source", "calculated");
   if (deleteError) throw new Error(`No se pudo limpiar el saldo anterior: ${deleteError.message}`);
   const capturedAt = new Date().toISOString();
-  const snapshots = [...positions.entries()]
-    .filter(([, position]) => Math.abs(position.quantity) > 1e-12)
-    .map(([assetId, position]) => ({
-      user_id: userId,
-      account_id: accountId,
-      asset_id: assetId,
-      captured_at: capturedAt,
-      quantity: position.quantity,
-      price_eur: position.priceEur,
-      value_eur: position.priceEur === null ? null : position.quantity * position.priceEur,
-      source: "calculated",
-    }));
+  const snapshots = [...positions.entries()].filter(([, position]) => Math.abs(position.quantity) > 1e-12).map(([assetId, position]) => ({ user_id: userId, account_id: accountId, asset_id: assetId, captured_at: capturedAt, quantity: position.quantity, price_eur: position.priceEur, value_eur: position.priceEur === null ? null : position.quantity * position.priceEur, source: "calculated" }));
   if (snapshots.length) {
     const { error: insertError } = await supabase.from("balance_snapshots").insert(snapshots);
     if (insertError) throw new Error(`No se pudo guardar el saldo: ${insertError.message}`);
@@ -216,17 +177,10 @@ async function repairAccount(supabase: any, userId: string, accountId: string, e
 
 export async function repairAllCsvBalances() {
   const { supabase, user } = await requireUser();
-  const { data: connections, error: connectionError } = await supabase
-    .from("exchange_connections")
-    .select("id,exchange_id")
-    .eq("user_id", user.id)
-    .eq("provider_type", "csv")
-    .eq("status", "active");
+  const { data: connections, error: connectionError } = await supabase.from("exchange_connections").select("id,exchange_id").eq("user_id", user.id).eq("provider_type", "csv").eq("status", "active");
   if (connectionError) throw new Error(connectionError.message);
   const exchangeIds = [...new Set((connections || []).map((item: AnyRecord) => item.exchange_id).filter(Boolean))];
-  const { data: exchanges, error: exchangeError } = exchangeIds.length
-    ? await supabase.from("exchanges").select("id,code").in("id", exchangeIds)
-    : { data: [], error: null };
+  const { data: exchanges, error: exchangeError } = exchangeIds.length ? await supabase.from("exchanges").select("id,code").in("id", exchangeIds) : { data: [], error: null };
   if (exchangeError) throw new Error(exchangeError.message);
   const codeById = new Map<string, string>((exchanges || []).map((item: AnyRecord) => [String(item.id), String(item.code).toLowerCase()]));
   let repaired = 0;
