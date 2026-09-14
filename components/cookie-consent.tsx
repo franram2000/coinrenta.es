@@ -17,10 +17,29 @@ function readConsent(): Consent | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<Consent>;
     if (typeof parsed.analytics !== "boolean" || typeof parsed.savedAt !== "number") return null;
-    if (Date.now() - parsed.savedAt > CONSENT_MAX_AGE_MS) return null;
+    if (Date.now() - parsed.savedAt > CONSENT_MAX_AGE_MS) {
+      window.localStorage.removeItem(CONSENT_KEY);
+      return null;
+    }
     return { analytics: parsed.analytics, savedAt: parsed.savedAt };
   } catch {
     return null;
+  }
+}
+
+function clearAnalyticsCookies() {
+  if (typeof document === "undefined") return;
+  const names = document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim().split("=")[0])
+    .filter((name) => name === "_ga" || name.startsWith("_ga_"));
+
+  const domains = [window.location.hostname, `.${window.location.hostname}`];
+  for (const name of names) {
+    document.cookie = `${name}=; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    for (const domain of domains) {
+      document.cookie = `${name}=; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${domain}`;
+    }
   }
 }
 
@@ -28,11 +47,12 @@ function saveConsent(analytics: boolean) {
   const consent: Consent = { analytics, savedAt: Date.now() };
   window.localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
   window.dispatchEvent(new CustomEvent("coinrenta-cookie-consent", { detail: consent }));
+  if (!analytics) clearAnalyticsCookies();
 }
 
 export default function CookieConsent() {
   const [consent, setConsent] = useState<Consent | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [analyticsChoice, setAnalyticsChoice] = useState(false);
 
   useEffect(() => {
@@ -46,43 +66,106 @@ export default function CookieConsent() {
     saveConsent(analytics);
     setConsent({ analytics, savedAt });
     setAnalyticsChoice(analytics);
-    setSettingsOpen(false);
+    setOpen(false);
   }
 
-  if (consent) return null;
+  function manage() {
+    setAnalyticsChoice(consent?.analytics ?? false);
+    setOpen(true);
+  }
+
+  const firstVisit = !consent;
 
   return (
-    <div className="cookie-consent" role="dialog" aria-modal="false" aria-labelledby="cookie-title">
-      <div className="cookie-consent-inner">
-        <div className="cookie-copy">
-          <span className="cookie-kicker">Privacidad</span>
-          <h2 id="cookie-title">Usamos cookies necesarias y, con tu permiso, analítica.</h2>
-          <p>
-            Las cookies técnicas son necesarias para que CoinRenta funcione y mantener tu sesión. Google Analytics solo se activará si lo autorizas. Puedes aceptar, rechazar o configurar las cookies desde este aviso. Consulta la <Link href="/legal/cookies">Política de cookies</Link>.
-          </p>
-        </div>
-        <div className="cookie-actions" aria-label="Preferencias de cookies">
-          <button type="button" className="cookie-btn cookie-btn-secondary" onClick={() => apply(false)}>Rechazar no necesarias</button>
-          <button type="button" className="cookie-btn cookie-btn-secondary" onClick={() => setSettingsOpen((value) => !value)}>Configurar</button>
-          <button type="button" className="cookie-btn cookie-btn-primary" onClick={() => apply(true)}>Aceptar todas</button>
-        </div>
-        {settingsOpen && (
-          <div className="cookie-settings" aria-label="Configuración detallada de cookies">
-            <div className="cookie-setting-row">
-              <div><strong>Necesarias</strong><span>Autenticación, seguridad y funcionamiento esencial. Siempre activas.</span></div>
-              <span className="cookie-required">Siempre activas</span>
+    <>
+      {!firstVisit && !open && (
+        <button
+          type="button"
+          className="cr-cookie-manage"
+          onClick={manage}
+          aria-label="Gestionar preferencias de cookies"
+        >
+          Privacidad · Cookies
+        </button>
+      )}
+
+      {firstVisit && !open && (
+        <div className="cr-cookie-backdrop" aria-hidden="true" />
+      )}
+
+      {(firstVisit || open) && (
+        <div className="cr-cookie-layer" role="dialog" aria-modal="true" aria-labelledby="cr-cookie-title">
+          <div className="cr-cookie-panel">
+            <div className="cr-cookie-header">
+              <div>
+                <span className="cr-cookie-kicker">Privacidad</span>
+                <h2 id="cr-cookie-title">
+                  {firstVisit ? "Cookies de CoinRenta" : "Preferencias de cookies"}
+                </h2>
+              </div>
+              {open && (
+                <button type="button" className="cr-cookie-close" onClick={() => setOpen(false)} aria-label="Cerrar preferencias">
+                  ×
+                </button>
+              )}
             </div>
-            <div className="cookie-setting-row">
-              <div><strong>Analítica</strong><span>Google Analytics para medir el uso de la web y mejorar el servicio. Se carga solo con tu consentimiento.</span></div>
-              <label className="cookie-toggle"><input type="checkbox" checked={analyticsChoice} onChange={(event) => setAnalyticsChoice(event.target.checked)} /><span aria-hidden="true" /></label>
+
+            {firstVisit && (
+              <p className="cr-cookie-intro">
+                Utilizamos tecnologías estrictamente necesarias para que CoinRenta funcione y, solo si lo autorizas, Google Analytics para obtener estadísticas de uso. Puedes aceptar, rechazar o configurar las cookies. Consulta la <Link href="/legal/cookies">Política de cookies</Link>.
+              </p>
+            )}
+
+            <div className="cr-cookie-categories">
+              <section className="cr-cookie-category">
+                <div className="cr-cookie-category-copy">
+                  <div className="cr-cookie-category-title">
+                    <strong>Necesarias</strong>
+                    <span className="cr-cookie-status cr-cookie-status-required">Siempre activas</span>
+                  </div>
+                  <p>Autenticación, seguridad, sesión y funcionamiento esencial del servicio. No se utilizan para publicidad ni analítica opcional.</p>
+                </div>
+              </section>
+
+              <section className="cr-cookie-category">
+                <div className="cr-cookie-category-copy">
+                  <div className="cr-cookie-category-title">
+                    <strong>Analítica</strong>
+                    <span className={`cr-cookie-status ${analyticsChoice ? "cr-cookie-status-on" : "cr-cookie-status-off"}`}>
+                      {analyticsChoice ? "Activada" : "Desactivada"}
+                    </span>
+                  </div>
+                  <p>Google Analytics para medir visitas y uso del sitio. Esta categoría solo se activa mediante una acción afirmativa.</p>
+                </div>
+                <label className="cr-cookie-toggle" aria-label="Activar cookies de analítica">
+                  <input
+                    type="checkbox"
+                    checked={analyticsChoice}
+                    onChange={(event) => setAnalyticsChoice(event.target.checked)}
+                  />
+                  <span aria-hidden="true" />
+                </label>
+              </section>
             </div>
-            <div className="cookie-settings-actions">
-              <button type="button" className="cookie-btn cookie-btn-secondary" onClick={() => apply(false)}>Guardar y rechazar</button>
-              <button type="button" className="cookie-btn cookie-btn-primary" onClick={() => apply(analyticsChoice)}>Guardar preferencias</button>
+
+            <div className="cr-cookie-actions">
+              <button type="button" className="cr-cookie-btn cr-cookie-btn-secondary" onClick={() => apply(false)}>
+                Rechazar no necesarias
+              </button>
+              <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => apply(analyticsChoice)}>
+                Guardar preferencias
+              </button>
+              <button type="button" className="cr-cookie-btn cr-cookie-btn-primary" onClick={() => apply(true)}>
+                Aceptar todas
+              </button>
             </div>
+
+            <p className="cr-cookie-footnote">
+              Puedes cambiar o retirar tu consentimiento en cualquier momento desde <button type="button" onClick={manage}>Privacidad · Cookies</button>. La preferencia se conserva temporalmente y se volverá a solicitar cuando corresponda.
+            </p>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
