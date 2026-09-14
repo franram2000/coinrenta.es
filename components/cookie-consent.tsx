@@ -50,9 +50,41 @@ function saveConsent(analytics: boolean) {
   if (!analytics) clearAnalyticsCookies();
 }
 
+function ConsentCategories({ analyticsChoice, setAnalyticsChoice }: { analyticsChoice: boolean; setAnalyticsChoice: (value: boolean) => void }) {
+  return (
+    <div className="cr-cookie-categories">
+      <section className="cr-cookie-category">
+        <div className="cr-cookie-category-copy">
+          <div className="cr-cookie-category-title">
+            <strong>Necesarias</strong>
+            <span className="cr-cookie-status cr-cookie-status-required">Siempre activas</span>
+          </div>
+          <p>Autenticación, seguridad, sesión y funcionamiento esencial del servicio. No se utilizan para publicidad ni analítica opcional.</p>
+        </div>
+      </section>
+
+      <section className="cr-cookie-category">
+        <div className="cr-cookie-category-copy">
+          <div className="cr-cookie-category-title">
+            <strong>Analítica</strong>
+            <span className={`cr-cookie-status ${analyticsChoice ? "cr-cookie-status-on" : "cr-cookie-status-off"}`}>
+              {analyticsChoice ? "Activada" : "Desactivada"}
+            </span>
+          </div>
+          <p>Google Analytics para medir visitas y uso del sitio. Esta categoría solo se activa mediante una acción afirmativa.</p>
+        </div>
+        <label className="cr-cookie-toggle" aria-label="Activar cookies de analítica">
+          <input type="checkbox" checked={analyticsChoice} onChange={(event) => setAnalyticsChoice(event.target.checked)} />
+          <span aria-hidden="true" />
+        </label>
+      </section>
+    </div>
+  );
+}
+
 export default function CookieConsent() {
   const [consent, setConsent] = useState<Consent | null>(null);
-  const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [analyticsChoice, setAnalyticsChoice] = useState(false);
 
   useEffect(() => {
@@ -66,47 +98,38 @@ export default function CookieConsent() {
     saveConsent(analytics);
     setConsent({ analytics, savedAt });
     setAnalyticsChoice(analytics);
-    setOpen(false);
+    setSettingsOpen(false);
   }
 
   function manage() {
     setAnalyticsChoice(consent?.analytics ?? false);
-    setOpen(true);
+    setSettingsOpen(true);
   }
 
   const firstVisit = !consent;
+  const showDialog = firstVisit || settingsOpen;
+  const detailed = settingsOpen;
 
   return (
     <>
-      {!firstVisit && !open && (
-        <button
-          type="button"
-          className="cr-cookie-manage"
-          onClick={manage}
-          aria-label="Gestionar preferencias de cookies"
-        >
+      {!firstVisit && !settingsOpen && (
+        <button type="button" className="cr-cookie-manage" onClick={manage} aria-label="Gestionar preferencias de cookies">
           Privacidad · Cookies
         </button>
       )}
 
-      {firstVisit && !open && (
-        <div className="cr-cookie-backdrop" aria-hidden="true" />
-      )}
+      {firstVisit && <div className="cr-cookie-backdrop" aria-hidden="true" />}
 
-      {(firstVisit || open) && (
+      {showDialog && (
         <div className="cr-cookie-layer" role="dialog" aria-modal="true" aria-labelledby="cr-cookie-title">
-          <div className="cr-cookie-panel">
+          <div className={`cr-cookie-panel ${detailed ? "cr-cookie-panel-detailed" : ""}`}>
             <div className="cr-cookie-header">
               <div>
                 <span className="cr-cookie-kicker">Privacidad</span>
-                <h2 id="cr-cookie-title">
-                  {firstVisit ? "Cookies de CoinRenta" : "Preferencias de cookies"}
-                </h2>
+                <h2 id="cr-cookie-title">{firstVisit ? "Cookies de CoinRenta" : "Preferencias de cookies"}</h2>
               </div>
-              {open && (
-                <button type="button" className="cr-cookie-close" onClick={() => setOpen(false)} aria-label="Cerrar preferencias">
-                  ×
-                </button>
+              {!firstVisit && (
+                <button type="button" className="cr-cookie-close" onClick={() => setSettingsOpen(false)} aria-label="Cerrar preferencias">×</button>
               )}
             </div>
 
@@ -116,52 +139,22 @@ export default function CookieConsent() {
               </p>
             )}
 
-            <div className="cr-cookie-categories">
-              <section className="cr-cookie-category">
-                <div className="cr-cookie-category-copy">
-                  <div className="cr-cookie-category-title">
-                    <strong>Necesarias</strong>
-                    <span className="cr-cookie-status cr-cookie-status-required">Siempre activas</span>
-                  </div>
-                  <p>Autenticación, seguridad, sesión y funcionamiento esencial del servicio. No se utilizan para publicidad ni analítica opcional.</p>
-                </div>
-              </section>
-
-              <section className="cr-cookie-category">
-                <div className="cr-cookie-category-copy">
-                  <div className="cr-cookie-category-title">
-                    <strong>Analítica</strong>
-                    <span className={`cr-cookie-status ${analyticsChoice ? "cr-cookie-status-on" : "cr-cookie-status-off"}`}>
-                      {analyticsChoice ? "Activada" : "Desactivada"}
-                    </span>
-                  </div>
-                  <p>Google Analytics para medir visitas y uso del sitio. Esta categoría solo se activa mediante una acción afirmativa.</p>
-                </div>
-                <label className="cr-cookie-toggle" aria-label="Activar cookies de analítica">
-                  <input
-                    type="checkbox"
-                    checked={analyticsChoice}
-                    onChange={(event) => setAnalyticsChoice(event.target.checked)}
-                  />
-                  <span aria-hidden="true" />
-                </label>
-              </section>
-            </div>
+            {detailed && <ConsentCategories analyticsChoice={analyticsChoice} setAnalyticsChoice={setAnalyticsChoice} />}
 
             <div className="cr-cookie-actions">
-              <button type="button" className="cr-cookie-btn cr-cookie-btn-secondary" onClick={() => apply(false)}>
-                Rechazar no necesarias
-              </button>
-              <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => apply(analyticsChoice)}>
-                Guardar preferencias
-              </button>
-              <button type="button" className="cr-cookie-btn cr-cookie-btn-primary" onClick={() => apply(true)}>
-                Aceptar todas
-              </button>
+              <button type="button" className="cr-cookie-btn cr-cookie-btn-secondary" onClick={() => apply(false)}>Rechazar no necesarias</button>
+              {!detailed && firstVisit && (
+                <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => setSettingsOpen(true)}>Configurar</button>
+              )}
+              {detailed && (
+                <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => apply(analyticsChoice)}>Guardar preferencias</button>
+              )}
+              <button type="button" className="cr-cookie-btn cr-cookie-btn-primary" onClick={() => apply(true)}>Aceptar todas</button>
             </div>
 
             <p className="cr-cookie-footnote">
-              Puedes cambiar o retirar tu consentimiento en cualquier momento desde <button type="button" onClick={manage}>Privacidad · Cookies</button>. La preferencia se conserva temporalmente y se volverá a solicitar cuando corresponda.
+              {firstVisit ? "Puedes cambiar o retirar tu consentimiento en cualquier momento desde " : "Puedes volver a modificar o retirar tu consentimiento en cualquier momento desde "}
+              <button type="button" onClick={manage}>Privacidad · Cookies</button>. La preferencia se conserva temporalmente y se volverá a solicitar cuando corresponda.
             </p>
           </div>
         </div>
