@@ -30,6 +30,7 @@ function persist(analytics: boolean) {
 
 export default function CookieNotice() {
   const [consent, setConsent] = useState<Consent | null>(null);
+  const [ready, setReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [analytics, setAnalytics] = useState(false);
 
@@ -37,6 +38,7 @@ export default function CookieNotice() {
     const current = readConsent();
     setConsent(current);
     setAnalytics(current?.analytics ?? false);
+    setReady(true);
   }, []);
 
   function save(value: boolean) {
@@ -46,7 +48,15 @@ export default function CookieNotice() {
     setSettingsOpen(false);
   }
 
-  if (consent) return null;
+  if (!ready) return null;
+
+  if (consent && !settingsOpen) {
+    return (
+      <button type="button" className="cookie-manage" onClick={() => setSettingsOpen(true)} aria-label="Cambiar preferencias de cookies">
+        Privacidad · Cookies
+      </button>
+    );
+  }
 
   return (
     <aside className="cookie-notice" role="dialog" aria-modal="false" aria-labelledby="cookie-notice-title">
