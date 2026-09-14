@@ -1,3 +1,82 @@
-import Link from "next/link";
-export const metadata={title:"Aviso legal | CoinRenta"};
-export default function LegalNotice(){return <main className="legal-page"><Link href="/" className="brand">Coin<span>Renta</span></Link><h1>Aviso legal</h1><p>Información general del sitio web CoinRenta y de sus servicios digitales.</p><h2>Identificación</h2><p>CoinRenta es un servicio web orientado a la organización, análisis y preparación de información relacionada con activos digitales y obligaciones fiscales.</p><h2>Objeto</h2><p>El contenido y las herramientas se ofrecen con finalidad informativa y de organización. CoinRenta no sustituye el asesoramiento financiero, fiscal, contable o jurídico profesional.</p><h2>Responsabilidad</h2><p>El usuario es responsable de verificar la información antes de utilizarla para presentar declaraciones o tomar decisiones.</p><p><Link href="/dashboard/ayuda">← Volver a ayuda</Link></p></main>}
+import type { Metadata } from "next";
+import LegalPage from "@/components/legal-page";
+
+export const metadata: Metadata = {
+  title: "Aviso legal",
+  description: "Información legal e identificativa de CoinRenta.",
+};
+
+const P = ({ children }: { children: React.ReactNode }) => <p>{children}</p>;
+
+export default function LegalNoticePage() {
+  return (
+    <LegalPage
+      label="Información jurídica"
+      title="Aviso legal"
+      intro="Información sobre el titular, las condiciones de acceso, las responsabilidades y el marco de uso del sitio web y de los servicios de CoinRenta."
+      updated="14 de septiembre de 2026"
+      sections={[
+        {
+          title: "1. Datos identificativos del prestador",
+          children: <>
+            <P><strong>Nombre comercial:</strong> CoinRenta.</P>
+            <P><strong>Sitio web:</strong> https://coinrenta.es</P>
+            <P><strong>Correo electrónico:</strong> info@coinrenta.es</P>
+            <P><strong>Titular jurídico:</strong> debe identificarse aquí la persona física o jurídica que explota CoinRenta, incluyendo nombre o denominación social, NIF y domicilio, conforme al artículo 10 de la Ley 34/2002 (LSSI-CE).</P>
+            <P>Los datos identificativos completos del titular deberán mantenerse permanentemente disponibles de forma fácil, directa y gratuita en este sitio web.</P>
+          </>,
+        },
+        {
+          title: "2. Objeto y ámbito",
+          children: <P>Este sitio web ofrece información sobre CoinRenta y permite acceder a herramientas digitales destinadas a organizar, importar, analizar y consultar información relacionada con activos digitales. El acceso y uso del sitio implican la aceptación de las condiciones legales aplicables y no convierten a CoinRenta en un proveedor de servicios financieros o de criptoactivos por el mero hecho de tratar información sobre estos activos.</P>,
+        },
+        {
+          title: "3. Naturaleza del servicio",
+          children: <>
+            <P>CoinRenta es una herramienta tecnológica de organización y análisis de información. No presta por sí misma, salvo que en el futuro se anuncie expresamente y se obtengan las autorizaciones que correspondan, servicios de custodia, intermediación, ejecución de órdenes, asesoramiento sobre inversión, gestión de carteras, recepción o transmisión de órdenes ni otros servicios regulados sobre criptoactivos.</P>
+            <P>La regulación MiCA establece requisitos de autorización para los proveedores que presten servicios de criptoactivos. CoinRenta no debe presentarse como un proveedor autorizado de tales servicios si no dispone de la autorización correspondiente.</P>
+          </>,
+        },
+        {
+          title: "4. Información fiscal y financiera",
+          children: <>
+            <P>Los cálculos, clasificaciones y contenidos fiscales de CoinRenta tienen finalidad informativa y de apoyo a la organización de datos. No constituyen asesoramiento fiscal, contable, jurídico ni financiero individualizado.</P>
+            <P>La persona usuaria debe comprobar los resultados y, cuando proceda, consultar a un profesional cualificado antes de presentar una declaración tributaria o adoptar una decisión con consecuencias fiscales o financieras.</P>
+          </>,
+        },
+        {
+          title: "5. Exactitud de la información",
+          children: <P>CoinRenta procura mantener la información y las herramientas actualizadas, pero la exactitud final puede depender de los datos suministrados por el usuario, de los exchanges, de archivos CSV, de precios de mercado, de cambios normativos y de incidencias técnicas. No debe entenderse que la información mostrada garantiza un resultado fiscal concreto.</P>,
+        },
+        {
+          title: "6. Conexiones con terceros",
+          children: <P>El usuario puede conectar servicios externos o importar archivos. Dichas conexiones se realizan bajo la autorización del usuario y están sujetas a las condiciones y políticas de privacidad de cada proveedor externo. CoinRenta no controla los servicios de terceros ni responde de sus cambios, interrupciones o errores independientes.</P>,
+        },
+        {
+          title: "7. Propiedad intelectual",
+          children: <P>El diseño, código, contenidos, logotipos, textos, elementos gráficos y demás materiales de CoinRenta están protegidos por la normativa aplicable sobre propiedad intelectual e industrial. Salvo autorización legal o del titular, no se permite su reproducción, distribución, comunicación pública, transformación o explotación fuera del uso legítimo del servicio.</P>,
+        },
+        {
+          title: "8. Conducta prohibida",
+          children: <P>Queda prohibido utilizar CoinRenta para fines ilícitos, intentar obtener acceso no autorizado a cuentas o sistemas, introducir código malicioso, interferir en la disponibilidad del servicio, eludir controles de seguridad o utilizar las integraciones de terceros de forma contraria a sus condiciones.</P>,
+        },
+        {
+          title: "9. Enlaces externos",
+          children: <P>Cuando el sitio incluya enlaces a webs o servicios de terceros, estos se facilitan por utilidad informativa. CoinRenta no controla su contenido ni sus políticas y no asume responsabilidad por ellos, sin perjuicio de las obligaciones que legalmente correspondan.</P>,
+        },
+        {
+          title: "10. Responsabilidad",
+          children: <P>Dentro de los límites permitidos por la ley, CoinRenta no será responsable de daños derivados de un uso contrario a estas condiciones, de información incorrecta aportada por terceros o por el usuario, de decisiones adoptadas exclusivamente sobre la base de cálculos informativos, ni de interrupciones provocadas por proveedores externos o causas de fuerza mayor. Esta limitación no excluye responsabilidades que legalmente no puedan limitarse.</P>,
+        },
+        {
+          title: "11. Legislación y jurisdicción",
+          children: <P>La prestación de servicios y el uso del sitio se regirán por la legislación española y de la Unión Europea que resulte aplicable. Cuando la persona usuaria tenga la condición legal de consumidora, se respetarán las normas imperativas de protección de consumidores y las reglas de jurisdicción que correspondan.</P>,
+        },
+        {
+          title: "12. Contacto",
+          children: <P>Para consultas sobre el sitio, el servicio o sus condiciones legales: <strong>info@coinrenta.es</strong>.</P>,
+        },
+      ]}
+    />
+  );
+}
