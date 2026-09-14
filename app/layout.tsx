@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./landing.css";
 import "./cookies.css";
+import "./error-pages.css";
 import CookieConsent from "@/components/cookie-consent";
 import AnalyticsConsent from "@/components/analytics-consent";
 
