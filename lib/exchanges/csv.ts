@@ -65,7 +65,10 @@ function movementDirection(amount: number | null, direction: string) { const f =
 function stableId(exchange: string, parser: string, row: CsvRow, preferred: string) { const id = clean(preferred); if (id) return `${exchange}:${id}`; const canonical = Object.entries(row).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${headerKey(k)}=${clean(v)}`).join("|"); return `${exchange}:row:${createHash("sha256").update(`${parser}|${canonical}`).digest("hex").slice(0, 40)}`; }
 
 type MovementInput = { occurredAt: string; transactionType: string; originalType: string; direction: string; baseAsset: string | null; baseAmount: number | null; quoteAsset: string | null; quoteAmount: number | null; feeAsset: string | null; feeAmount: number | null; price: number | null; priceCurrency: string | null };
-function make(exchange: string, parser: string, row: CsvRow, input: MovementInput) { return { ...input, externalId: stableId(exchange, parser, row, ""), direction: movementDirection(input.baseAmount, input.direction), classification: input.transactionType === "other" ? "needs_review" : "classified", raw: { sourceFile: "", sourceExchange: exchange, row, parser } } satisfies NormalizedMovement; }
+function make(exchange: string, parser: string, row: CsvRow, input: MovementInput): NormalizedMovement {
+  const { direction: rawDirection, ...movement } = input;
+  return { ...movement, externalId: stableId(exchange, parser, row, ""), direction: movementDirection(input.baseAmount, rawDirection), classification: input.transactionType === "other" ? "needs_review" : "classified", raw: { sourceFile: "", sourceExchange: exchange, row, parser } };
+}
 
 function bitpanda(rows: CsvRow[], file: string) {
   return rows.map((row) => {
