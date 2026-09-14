@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "register";
+const SITE_URL = "https://coinrenta.es";
 
 export default function AuthForm({ mode }: { mode: Mode }) {
   const isRegister = mode === "register";
@@ -24,7 +25,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
     try {
       const supabase = createClient();
-      const origin = window.location.origin;
 
       if (isRegister) {
         const { data, error: signupError } = await supabase.auth.signUp({
@@ -32,7 +32,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           password,
           options: {
             data: { display_name: displayName.trim() || null },
-            emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+            emailRedirectTo: `${SITE_URL}/verificar-correo`,
           },
         });
 
@@ -79,10 +79,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
       {!isRegister && (
         <div style={{ marginTop: -6, marginBottom: 4, textAlign: "right" }}>
-          <Link
-            href="/recuperar"
-            style={{ color: "#16b8ae", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
-          >
+          <Link href="/recuperar" style={{ color: "#16b8ae", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
             ¿Has olvidado tu contraseña?
           </Link>
         </div>
