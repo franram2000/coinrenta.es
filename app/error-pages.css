@@ -3,9 +3,9 @@
 .cr-system-page::before{content:"";position:absolute;width:760px;height:760px;right:-250px;top:-280px;border-radius:50%;background:radial-gradient(circle,rgba(15,167,160,.17),rgba(15,167,160,.04) 42%,transparent 70%);filter:blur(18px);pointer-events:none}
 .cr-system-page::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.42;background-image:linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse at center,black 0%,transparent 76%)}
 .cr-system-shell{position:relative;z-index:2;width:min(760px,calc(100% - 40px));padding:48px 0;text-align:center}
-.cr-system-brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:48px;font-weight:900;letter-spacing:-.055em}
-.cr-system-brand img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 16px rgba(104,238,229,.22))}
-.cr-system-brand span{font-size:21px}.cr-system-brand b{color:#68eee5}
+.cr-system-brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:48px;font-weight:900;letter-spacing:-.055em}
+.cr-system-brand img{width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(104,238,229,.20))}
+.cr-system-brand span{font-size:20px}.cr-system-brand b{color:#68eee5}
 .cr-system-card{position:relative;padding:52px 46px;border:1px solid rgba(255,255,255,.10);border-radius:28px;background:linear-gradient(145deg,rgba(17,28,47,.90),rgba(8,15,27,.94));box-shadow:0 35px 100px rgba(0,0,0,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .cr-system-icon{width:72px;height:72px;margin:0 auto 25px;display:grid;place-items:center;border-radius:22px;border:1px solid rgba(104,238,229,.17);background:rgba(15,167,160,.09);color:#68eee5;font-size:25px;font-weight:900;box-shadow:0 0 50px rgba(15,167,160,.10)}
 .cr-system-code{margin:0;color:#68eee5;font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
@@ -22,4 +22,4 @@
 .cr-maintenance .cr-system-icon{position:relative;color:#68eee5}
 .cr-maintenance .cr-system-icon::after{content:"";position:absolute;width:38px;height:38px;border:1px dashed rgba(104,238,229,.45);border-radius:50%;animation:crSpin 8s linear infinite}
 @keyframes crSpin{to{transform:rotate(360deg)}}
-@media(max-width:600px){.cr-system-shell{width:min(100% - 28px,760px);padding:28px 0}.cr-system-brand{margin-bottom:28px}.cr-system-card{padding:38px 22px;border-radius:22px}.cr-system-card h1{font-size:42px}.cr-system-card p{font-size:14px}.cr-system-actions{flex-direction:column}.cr-system-btn{width:100%}.cr-system-icon{width:64px;height:64px}}
+@media(max-width:600px){.cr-system-shell{width:min(100% - 28px,760px);padding:28px 0}.cr-system-brand{margin-bottom:28px}.cr-system-brand img{width:29px;height:29px}.cr-system-brand span{font-size:18px}.cr-system-card{padding:38px 22px;border-radius:22px}.cr-system-card h1{font-size:42px}.cr-system-card p{font-size:14px}.cr-system-actions{flex-direction:column}.cr-system-btn{width:100%}.cr-system-icon{width:64px;height:64px}}
