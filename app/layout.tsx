@@ -6,24 +6,67 @@ import CookieConsent from "@/components/cookie-consent";
 import AnalyticsConsent from "@/components/analytics-consent";
 
 const siteUrl = "https://coinrenta.es";
-const siteTitle = "CoinRenta | Fiscalidad de criptomonedas y control de cartera";
-const siteDescription = "Organiza tus criptomonedas, conecta exchanges o importa CSV y prepara tu información para la Renta desde un único espacio.";
+const siteTitle = "CoinRenta | Control y fiscalidad de criptomonedas en España";
+const siteDescription = "Organiza tus operaciones de criptomonedas, consolida exchanges y CSV y prepara la información necesaria para revisar tu Renta desde un único espacio.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: siteTitle, template: "%s | CoinRenta" },
   description: siteDescription,
-  keywords: ["CoinRenta", "fiscalidad criptomonedas", "renta criptomonedas", "declaración renta criptomonedas", "impuestos criptomonedas España", "plusvalías criptomonedas", "control cartera cripto", "tracking criptomonedas", "operaciones criptomonedas", "CSV criptomonedas"],
+  keywords: [
+    "CoinRenta",
+    "fiscalidad criptomonedas",
+    "fiscalidad cripto España",
+    "Renta criptomonedas",
+    "declaración Renta criptomonedas",
+    "impuestos criptomonedas España",
+    "plusvalías criptomonedas",
+    "control cartera criptomonedas",
+    "gestor cartera cripto",
+    "operaciones criptomonedas",
+    "transacciones criptomonedas",
+    "CSV criptomonedas",
+    "exchanges criptomonedas",
+    "MiCA criptomonedas",
+    "DAC8 criptomonedas",
+    "CARF criptomonedas",
+  ],
   applicationName: "CoinRenta",
   category: "finance",
   authors: [{ name: "CoinRenta" }],
   creator: "CoinRenta",
   publisher: "CoinRenta",
   alternates: { canonical: "/" },
-  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
-  openGraph: { type: "website", locale: "es_ES", url: siteUrl, siteName: "CoinRenta", title: siteTitle, description: siteDescription, images: [{ url: "/logo.png", width: 512, height: 512, alt: "CoinRenta" }] },
-  twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, images: ["/logo.png"] },
-  icons: { icon: [{ url: "/logo.png", type: "image/png", sizes: "any" }], apple: [{ url: "/logo.png", type: "image/png" }] },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    url: siteUrl,
+    siteName: "CoinRenta",
+    title: siteTitle,
+    description: siteDescription,
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "CoinRenta — control y fiscalidad de criptomonedas" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/logo.png"],
+  },
+  icons: {
+    icon: [{ url: "/logo.png", type: "image/png", sizes: "any" }],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = { themeColor: "#050812", colorScheme: "dark" };
