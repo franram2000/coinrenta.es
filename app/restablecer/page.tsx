@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import PasswordResetForm from "@/components/password-reset-form";
 
 export const metadata: Metadata = {
@@ -9,7 +12,15 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const cookieStore = await cookies();
+  const recoveryCookie = cookieStore.get("coinrenta_password_recovery")?.value;
+  if (recoveryCookie !== "1") notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) notFound();
+
   return (
     <main className="auth-page">
       <div className="auth-shell">
