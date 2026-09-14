@@ -10,6 +10,7 @@ import "./fiscality.css";
 import "./renta/renta.css";
 import "./summary.css";
 import "./spacing-fix.css";
+import "./accessibility.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardSidebar from "./dashboard-sidebar";
