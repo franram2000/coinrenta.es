@@ -29,7 +29,14 @@ export default function LegalPage({ label, title, updated, intro, activePath, se
 
       <header className="legal-topbar">
         <Link href="/" className="legal-brand" aria-label="Volver a CoinRenta">
-          <img src="/logo.png" alt="CoinRenta" className="legal-brand-logo" />
+          <img
+            src="/logo.png"
+            alt="CoinRenta"
+            className="legal-brand-logo"
+            width={34}
+            height={34}
+            style={{ width: "34px", height: "34px", objectFit: "contain", flex: "0 0 34px" }}
+          />
           <span>Coin<span>Renta</span></span>
         </Link>
         <Link href="/" className="legal-back">Volver a la web <span>↗</span></Link>
