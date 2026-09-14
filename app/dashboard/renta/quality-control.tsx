@@ -3,63 +3,17 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-type Sale = {
-  id: string;
-  occurredAt: string;
-  symbol: string;
-  name: string;
-  quantity: number;
-  proceeds: number | null;
-  missingQuantity: number;
-  reason: string;
-};
+type Sale = { id:string; occurredAt:string; symbol:string; name:string; quantity:number; proceeds:number|null; missingQuantity:number; reason:string };
+type Issue = { code:string; title:string; description:string; actionLabel?:string; actionHref?:string; sales?:Sale[] };
+function money(value:number|null){if(value===null||!Number.isFinite(value))return'—';return value.toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2});}
+function qty(value:number){return value.toLocaleString('es-ES',{maximumFractionDigits:8});}
+function date(value:string){return new Intl.DateTimeFormat('es-ES',{dateStyle:'short',timeStyle:'short'}).format(new Date(value));}
 
-type Issue = { code: string; title: string; description: string; actionLabel?: string; actionHref?: string; sales?: Sale[] };
-
-function money(value: number | null) {
-  if (value === null || !Number.isFinite(value)) return '—';
-  return value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
-}
-function qty(value: number) { return value.toLocaleString('es-ES', { maximumFractionDigits: 8 }); }
-function date(value: string) { return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
-
-export default function QualityControl({ issues }: { issues: Issue[] }) {
-  const [open, setOpen] = useState<string | null>(issues[0]?.code ?? null);
-  const actionable = issues.filter((issue) => issue.code !== 'info');
-  const informational = issues.filter((issue) => issue.code === 'info');
-
+export default function QualityControl({issues}:{issues:Issue[]}){
+  const [open,setOpen]=useState<string|null>(issues[0]?.code??null);const actionable=issues.filter(i=>!i.code.startsWith('info'));const informational=issues.filter(i=>i.code.startsWith('info'));
   return <div className="quality-control">
-    {actionable.length > 0 && <div className="quality-group">
-      <div className="quality-group-head"><div><span className="section-kicker">REQUIERE ACCIÓN</span><h4>Hay {actionable.length} incidencia{actionable.length === 1 ? '' : 's'} que puedes resolver</h4></div><span className="quality-count quality-count-action">{actionable.length}</span></div>
-      <div className="quality-list">
-        {actionable.map((issue) => {
-          const expanded = open === issue.code;
-          return <article className="quality-issue quality-issue-action" key={issue.code}>
-            <button type="button" className="quality-issue-head" onClick={() => setOpen(expanded ? null : issue.code)} aria-expanded={expanded}>
-              <span className="quality-icon">!</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span><span className="quality-chevron">{expanded ? '−' : '+'}</span>
-            </button>
-            {expanded && <div className="quality-issue-body">
-              {issue.sales?.length ? <div className="quality-sales"><div className="quality-sales-head"><strong>Ventas afectadas</strong><span>{issue.sales.length} detectadas</span></div>{issue.sales.map((sale) => <div className="quality-sale" key={sale.id}>
-                <div className="quality-sale-main"><strong>{sale.symbol}</strong><span>{date(sale.occurredAt)}</span><span>{qty(sale.quantity)} vendidos</span></div>
-                <div className="quality-sale-detail"><span>Venta: <b>{money(sale.proceeds)}</b></span><span>Coste no demostrable: <b>{qty(sale.missingQuantity)} {sale.symbol}</b></span><span>{sale.reason}</span></div>
-                <div className="quality-actions">
-                  <Link className="quality-action primary" href={`/dashboard/movimientos?asset=${encodeURIComponent(sale.symbol)}&before=${encodeURIComponent(sale.occurredAt)}`}>Revisar movimientos</Link>
-                  <Link className="quality-action secondary" href="/dashboard/exchanges">Importar CSV que falta</Link>
-                </div>
-              </div>)}</div> : null}
-              <div className="quality-help"><strong>Cómo resolverlo</strong><span>CoinRenta no inventa el coste. Primero revisa los movimientos anteriores del activo; si la compra o depósito original no está importado, añade el CSV histórico del exchange. Al volver a importar, el control de calidad se recalcula automáticamente.</span></div>
-              {issue.actionHref && <div className="quality-actions"><Link className="quality-action primary" href={issue.actionHref}>{issue.actionLabel || 'Resolver incidencia'}</Link></div>}
-            </div>}
-          </article>;
-        })}
-      </div>
-    </div>}
-
-    {informational.length > 0 && <div className="quality-group quality-group-info">
-      <div className="quality-group-head"><div><span className="section-kicker">INFORMACIÓN</span><h4>Datos que conviene conocer</h4></div><span className="quality-count quality-count-info">{informational.length}</span></div>
-      <div className="quality-list">{informational.map((issue) => <article className="quality-issue quality-issue-info" key={issue.title}><div className="quality-issue-head static"><span className="quality-icon">i</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span></div></article>)}</div>
-    </div>}
-
-    {!issues.length && <div className="renta-ready"><strong>La información disponible pasa las comprobaciones básicas de integridad.</strong><span>No hay incidencias que requieran intervención. Aun así, la revisión final debe contrastarse con la documentación original de cada exchange.</span></div>}
+    {actionable.length>0&&<div className="quality-group"><div className="quality-group-head"><div><span className="section-kicker">REQUIERE ACCIÓN</span><h4>Hay {actionable.length} incidencia{actionable.length===1?'':'s'} que puedes resolver</h4></div><span className="quality-count quality-count-action">{actionable.length}</span></div><div className="quality-list">{actionable.map(issue=>{const expanded=open===issue.code;return <article className="quality-issue quality-issue-action" key={issue.code}><button type="button" className="quality-issue-head" onClick={()=>setOpen(expanded?null:issue.code)} aria-expanded={expanded}><span className="quality-icon">!</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span><span className="quality-chevron">{expanded?'−':'+'}</span></button>{expanded&&<div className="quality-issue-body">{issue.sales?.length?<div className="quality-sales"><div className="quality-sales-head"><strong>Ventas afectadas</strong><span>{issue.sales.length} detectadas</span></div>{issue.sales.map(sale=><div className="quality-sale" key={sale.id}><div className="quality-sale-main"><strong>{sale.symbol}</strong><span>{date(sale.occurredAt)}</span><span>{qty(sale.quantity)} vendidos</span></div><div className="quality-sale-detail"><span>Venta: <b>{money(sale.proceeds)}</b></span><span>Coste no demostrable: <b>{qty(sale.missingQuantity)} {sale.symbol}</b></span><span>{sale.reason}</span></div><div className="quality-actions"><Link className="quality-action primary" href={`/dashboard/renta/revisar?asset=${encodeURIComponent(sale.symbol)}&before=${encodeURIComponent(sale.occurredAt)}&sale=${encodeURIComponent(sale.id)}`}>Revisar lote</Link><Link className="quality-action secondary" href="/dashboard/exchanges">Importar CSV que falta</Link></div></div>)}</div>:null}<div className="quality-help"><strong>Cómo resolverlo</strong><span>CoinRenta no inventa el coste. Revisa primero los movimientos anteriores del activo. Si la compra o depósito original no está importado, añade el CSV histórico del exchange y vuelve a importar; el control se recalculará automáticamente.</span></div>{issue.actionHref&&<div className="quality-actions"><Link className="quality-action primary" href={issue.actionHref}>{issue.actionLabel||'Resolver incidencia'}</Link></div>}</div>}</article>})}</div></div>}
+    {informational.length>0&&<div className="quality-group quality-group-info"><div className="quality-group-head"><div><span className="section-kicker">INFORMACIÓN</span><h4>Datos que conviene conocer</h4></div><span className="quality-count quality-count-info">{informational.length}</span></div><div className="quality-list">{informational.map(issue=><article className="quality-issue quality-issue-info" key={issue.code}><div className="quality-issue-head static"><span className="quality-icon">i</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span></div></article>)}</div></div>}
+    {!issues.length&&<div className="renta-ready"><strong>La información disponible pasa las comprobaciones básicas de integridad.</strong><span>No hay incidencias que requieran intervención. Aun así, la revisión final debe contrastarse con la documentación original de cada exchange.</span></div>}
   </div>;
 }
