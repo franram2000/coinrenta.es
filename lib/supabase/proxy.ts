@@ -6,8 +6,6 @@ export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  // The public site must remain available even if Supabase Auth is temporarily
-  // unavailable or its public environment variables are missing in Vercel.
   if (!supabaseUrl || !supabaseKey) return supabaseResponse;
 
   try {
@@ -30,6 +28,7 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const isProtected = pathname.startsWith("/dashboard");
     const isAuthPage = pathname === "/login" || pathname === "/registro";
+    const isHome = pathname === "/";
     let isActive = true;
 
     if (userId) {
@@ -39,8 +38,6 @@ export async function updateSession(request: NextRequest) {
         .eq("id", userId)
         .maybeSingle();
 
-      // Fail closed only for the protected area. A profile query problem should
-      // never make the public landing page return HTTP 500.
       isActive = profileError ? true : profile?.is_active !== false;
     }
 
@@ -52,10 +49,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (isAuthPage && userId && isActive) return NextResponse.redirect(new URL("/dashboard", request.url));
+    if ((isAuthPage || isHome) && userId && isActive) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     return supabaseResponse;
   } catch {
-    // Auth/session errors must not take down the public application shell.
     if (request.nextUrl.pathname.startsWith("/dashboard")) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
