@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { importCsvConnection, refreshCsvConnections } from "./csv-actions";
 
 const FIAT = new Set(["EUR","USD","GBP","CHF","PLN","SEK","DKK","NOK","AUD","CAD","JPY","SGD"]);
-
 type AnyRecord = Record<string, unknown>;
 type Position = { quantity: number; priceEur: number | null };
 
@@ -14,14 +14,11 @@ function parseNumber(value: unknown) {
   if (!raw || raw === "-") return null;
   const negative = /^\(.*\)$/.test(raw);
   raw = raw.replace(/[()]/g, "");
-  if (raw.includes(",") && raw.includes(".")) {
-    raw = raw.lastIndexOf(",") > raw.lastIndexOf(".") ? raw.replace(/\./g, "").replace(",", ".") : raw.replace(/,/g, "");
-  } else {
-    raw = raw.replace(/,/g, ".");
-  }
-  const result = Number(raw);
-  if (!Number.isFinite(result)) return null;
-  return negative ? -Math.abs(result) : result;
+  if (raw.includes(",") && raw.includes(".")) raw = raw.lastIndexOf(",") > raw.lastIndexOf(".") ? raw.replace(/\./g, "").replace(",", ".") : raw.replace(/,/g, "");
+  else raw = raw.replace(/,/g, ".");
+  const number = Number(raw);
+  if (!Number.isFinite(number)) return null;
+  return negative ? -Math.abs(number) : number;
 }
 
 async function requireUser() {
@@ -47,22 +44,6 @@ async function rebuildKrakenAccountBalance(supabase: any, userId: string, accoun
   if (assetError) throw new Error(`No se pudieron resolver los activos de Kraken: ${assetError.message}`);
 
   const assetById = new Map<string, string>((assets || []).map((asset: AnyRecord) => [String(asset.id), String(asset.symbol).toUpperCase()]));
-  const symbols = new Set<string>();
-  for (const row of rows || []) {
-    const raw = (row.raw_data && typeof row.raw_data === "object" ? row.raw_data : {}) as AnyRecord;
-    const sourceRow = (raw.row && typeof raw.row === "object" ? raw.row : {}) as AnyRecord;
-    if (raw.parser === "kraken-ledger") {
-      const symbol = String(sourceRow.asset ?? assetById.get(String(row.base_asset_id)) ?? "").trim().toUpperCase();
-      if (symbol) symbols.add(symbol);
-    }
-  }
-
-  if (symbols.size) {
-    const { data: matchingAssets, error: symbolError } = await supabase.from("assets").select("id,symbol").in("symbol", [...symbols]);
-    if (symbolError) throw new Error(`No se pudieron resolver los saldos de Kraken: ${symbolError.message}`);
-    for (const asset of matchingAssets || []) assetById.set(String(asset.id), String(asset.symbol).toUpperCase());
-  }
-
   const positions = new Map<string, Position>();
   const ledgerBalances = new Map<string, { quantity: number; at: number; priceEur: number | null }>();
 
@@ -75,27 +56,26 @@ async function rebuildKrakenAccountBalance(supabase: any, userId: string, accoun
     const current = positions.get(id) || { quantity: 0, priceEur: null };
     current.quantity += numeric;
     if (FIAT.has(symbol)) current.priceEur = 1;
-    const p = parseNumber(price);
-    if (p !== null && String(currency ?? "").toUpperCase() === "EUR") current.priceEur = p;
+    const numericPrice = parseNumber(price);
+    if (numericPrice !== null && String(currency ?? "").toUpperCase() === "EUR") current.priceEur = numericPrice;
     positions.set(id, current);
   };
 
   for (const tx of rows || []) {
     const raw = (tx.raw_data && typeof tx.raw_data === "object" ? tx.raw_data : {}) as AnyRecord;
     const sourceRow = (raw.row && typeof raw.row === "object" ? raw.row : {}) as AnyRecord;
-    const timestamp = new Date(String(tx.occurred_at || "")).getTime();
-    const timestampValue = Number.isFinite(timestamp) ? timestamp : 0;
+    const at = new Date(String(tx.occurred_at || "")).getTime();
+    const timestamp = Number.isFinite(at) ? at : 0;
 
     if (raw.parser === "kraken-ledger") {
       const symbol = String(sourceRow.asset ?? assetById.get(String(tx.base_asset_id)) ?? "").trim().toUpperCase();
       const balance = parseNumber(sourceRow.balance);
-      if (symbol && balance !== null && tx.base_asset_id) {
-        const previous = ledgerBalances.get(String(tx.base_asset_id));
+      const assetId = tx.base_asset_id ? String(tx.base_asset_id) : "";
+      if (symbol && balance !== null && assetId) {
         const price = parseNumber(tx.price);
         const priceEur = price !== null && String(tx.price_currency ?? "").toUpperCase() === "EUR" ? price : null;
-        if (!previous || timestampValue >= previous.at) {
-          ledgerBalances.set(String(tx.base_asset_id), { quantity: balance, at: timestampValue, priceEur });
-        }
+        const previous = ledgerBalances.get(assetId);
+        if (!previous || timestamp >= previous.at) ledgerBalances.set(assetId, { quantity: balance, at: timestamp, priceEur });
       }
       continue;
     }
@@ -162,7 +142,12 @@ export async function repairKrakenBalances() {
   const connectionIds = (connections || []).filter((item: AnyRecord) => krakenIds.has(String(item.exchange_id))).map((item: AnyRecord) => String(item.id));
   if (!connectionIds.length) return 0;
 
-  const { data: accounts, error: accountError } = await supabase.from("accounts").select("id,connection_id").in("connection_id", connectionIds).eq("user_id", user.id).eq("is_active", true);
+  const { data: accounts, error: accountError } = await supabase
+    .from("accounts")
+    .select("id,connection_id")
+    .in("connection_id", connectionIds)
+    .eq("user_id", user.id)
+    .eq("is_active", true);
   if (accountError) throw new Error(`No se pudieron cargar las cuentas de Kraken: ${accountError.message}`);
 
   let repaired = 0;
@@ -178,14 +163,13 @@ export async function repairKrakenBalances() {
   return repaired;
 }
 
-export async function importKrakenCsvConnection(formData: FormData, originalAction: (formData: FormData) => Promise<any>) {
-  const result = await originalAction(formData);
+export async function importKrakenCsvConnection(formData: FormData) {
+  const result = await importCsvConnection(formData);
   if (result?.connectionId) await repairKrakenBalances();
   return result;
 }
 
-export async function refreshWithKrakenBalances(originalAction: () => Promise<void>) {
-  await originalAction();
-  const repaired = await repairKrakenBalances();
-  return repaired;
+export async function refreshWithKrakenBalances() {
+  await refreshCsvConnections();
+  return repairKrakenBalances();
 }
