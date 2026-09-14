@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./landing.css";
+import CookieNotice from "@/components/cookie-notice";
 
 const siteUrl = "https://coinrenta.es";
 const siteTitle = "CoinRenta | Fiscalidad de criptomonedas y control de cartera";
@@ -66,5 +67,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" className="dark"><body>{children}</body></html>;
+  return <html lang="es" className="dark"><body>{children}<CookieNotice /></body></html>;
 }
