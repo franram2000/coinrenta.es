@@ -8,8 +8,9 @@ type LegalSection = {
 type LegalPageProps = {
   label: string;
   title: string;
-  intro: string;
   updated: string;
+  intro: string;
+  activePath: string;
   sections: LegalSection[];
 };
 
@@ -20,7 +21,7 @@ const links = [
   ["Términos", "/legal/terminos"],
 ] as const;
 
-export default function LegalPage({ label, title, intro, updated, sections }: LegalPageProps) {
+export default function LegalPage({ label, title, updated, intro, activePath, sections }: LegalPageProps) {
   return (
     <main className="legal-shell">
       <div className="legal-orb legal-orb-one" aria-hidden="true" />
@@ -37,7 +38,7 @@ export default function LegalPage({ label, title, intro, updated, sections }: Le
       <div className="legal-container">
         <nav className="legal-nav" aria-label="Documentos legales">
           {links.map(([name, href]) => (
-            <Link key={href} href={href} className={href.endsWith(title.toLowerCase().replaceAll(" ", "-")) ? "active" : ""}>
+            <Link key={href} href={href} className={href === activePath ? "active" : ""}>
               {name}
             </Link>
           ))}
