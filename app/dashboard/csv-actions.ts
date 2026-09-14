@@ -38,10 +38,13 @@ async function rebuildCsvSnapshot(supabase:any,userId:string,accountId:string){
     if(FIAT.has(symbol))current.priceEur=1; if(price!==null&&Number.isFinite(price)&&String(currency||"").toUpperCase()==="EUR")current.priceEur=price; positions.set(assetId,current);
   };
   for(const tx of rows||[]){add(tx.base_asset_id,Number.isFinite(Number(tx.base_amount))?Number(tx.base_amount):null,Number.isFinite(Number(tx.price))?Number(tx.price):null,tx.price_currency);add(tx.quote_asset_id,Number.isFinite(Number(tx.quote_amount))?Number(tx.quote_amount):null,null,null);add(tx.fee_asset_id,Number.isFinite(Number(tx.fee_amount))?Number(tx.fee_amount):null,null,null);}
-  const {error:deleteError}=await supabase.from("balance_snapshots").delete().eq("user_id",userId).eq("account_id",accountId).eq("source","calculated_csv");
+
+  // La base de datos acepta "calculated" en balance_snapshots.source.
+  // Borramos el snapshot calculado anterior para evitar duplicados al reimportar.
+  const {error:deleteError}=await supabase.from("balance_snapshots").delete().eq("user_id",userId).eq("account_id",accountId).eq("source","calculated");
   if(deleteError)throw new Error(`No se pudo actualizar el saldo calculado: ${deleteError.message}`);
   const capturedAt=new Date().toISOString();
-  const snapshots=[...positions.entries()].filter(([,position])=>Math.abs(position.quantity)>1e-12).map(([assetId,position])=>({user_id:userId,account_id:accountId,asset_id:assetId,captured_at:capturedAt,quantity:position.quantity,price_eur:position.priceEur,value_eur:position.priceEur===null?null:position.quantity*position.priceEur,source:"calculated_csv"}));
+  const snapshots=[...positions.entries()].filter(([,position])=>Math.abs(position.quantity)>1e-12).map(([assetId,position])=>({user_id:userId,account_id:accountId,asset_id:assetId,captured_at:capturedAt,quantity:position.quantity,price_eur:position.priceEur,value_eur:position.priceEur===null?null:position.quantity*position.priceEur,source:"calculated"}));
   if(snapshots.length){const {error:insertError}=await supabase.from("balance_snapshots").insert(snapshots);if(insertError)throw new Error(`No se pudo guardar el saldo calculado: ${insertError.message}`);}
   return snapshots.length;
 }
