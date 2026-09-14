@@ -1,30 +1,11 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import AuthForm from "@/components/auth-form";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Iniciar sesión",
   description: "Accede a tu cuenta de CoinRenta.",
   robots: { index: false, follow: false },
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
-  const params = await searchParams;
-  const passwordUpdated = params.password === "updated";
-
-  return (
-    <main className="auth-page">
-      <div className="auth-shell">
-        <div className="auth-brand"><Link href="/"><Image src="/logo.png" alt="CoinRenta" width={44} height={44} priority style={{ width: 44, height: 44, objectFit: "contain" }} /><span className="brand-name">Coin<span>Renta</span></span></Link></div>
-        <section className="auth-card" aria-labelledby="login-title">
-          <div className="auth-heading"><span className="section-kicker">Bienvenido de nuevo</span><h1 id="login-title">Inicia sesión</h1><p>Entra para revisar tus ejercicios fiscales y tus movimientos.</p></div>
-          {passwordUpdated && <p className="form-alert form-alert-success" role="status">Contraseña actualizada correctamente. Ya puedes iniciar sesión con tu nueva contraseña.</p>}
-          <AuthForm mode="login" />
-          <p className="auth-switch">¿Todavía no tienes cuenta? <Link href="/registro">Crear cuenta</Link></p>
-        </section>
-        <p className="auth-foot">Datos fiscales y financieros. Diseñado para mantener el control en tus manos.</p>
-      </div>
-    </main>
-  );
+export default function LoginPage() {
+  redirect("/proximamente");
 }
