@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type Sale = { id:string; occurredAt:string; symbol:string; name:string; quantity:number; proceeds:number|null; missingQuantity:number; reason:string };
@@ -13,29 +13,25 @@ function date(value:string){return new Intl.DateTimeFormat('es-ES',{dateStyle:'s
 export default function QualityControl({issues}:{issues:Issue[]}){
   const [open,setOpen]=useState<string|null>(null);
   const [isPro,setIsPro]=useState<boolean|null>(null);
-  const [loading,setLoading]=useState(true);
-
-  useState(()=>{
+  useEffect(()=>{
     let active=true;
     const load=async()=>{
       try{
         const db=createClient();
         const {data:{user}}=await db.auth.getUser();
-        if(!user){if(active){setIsPro(false);setLoading(false);}return;}
+        if(!user){if(active)setIsPro(false);return;}
         const {data}=await db.from('profiles').select('role').eq('id',user.id).maybeSingle();
-        if(active){setIsPro(data?.role==='pro'||data?.role==='admin');setLoading(false);}
-      }catch{if(active){setIsPro(false);setLoading(false);}}
+        if(active)setIsPro(data?.role==='pro'||data?.role==='admin');
+      }catch{if(active)setIsPro(false);}
     };
     void load();
     return()=>{active=false;};
-  });
+  },[]);
 
-  const actionable=issues.filter(i=>!i.code.startsWith('info'));const informational=issues.filter(i=>i.code.startsWith('info'));
-  const pro=isPro===true;
+  const actionable=issues.filter(i=>!i.code.startsWith('info'));const informational=issues.filter(i=>i.code.startsWith('info'));const pro=isPro===true;
   return <div className="quality-control">
     {actionable.length>0&&<div className="quality-group"><div className="quality-group-head"><div><span className="section-kicker">REQUIERE ACCIÓN</span><h4>Hay {actionable.length} incidencia{actionable.length===1?'':'s'} detectada{actionable.length===1?'':'s'}</h4></div><span className="quality-count quality-count-action">{actionable.length}</span></div>
-      {!pro?<div className="quality-pro-locked"><strong>Detalle disponible en Pro</strong><span>El plan Free muestra el número de incidencias detectadas. Pasa a Pro para consultar cada incidencia, las operaciones afectadas y las herramientas para resolverlas.</span><Link className="quality-action primary" href="/dashboard/configuracion">Ver Pro</Link></div>:
-      <div className="quality-list">{actionable.map(issue=>{const expanded=open===issue.code;return <article className="quality-issue quality-issue-action" key={issue.code}><button type="button" className="quality-issue-head" onClick={()=>setOpen(expanded?null:issue.code)} aria-expanded={expanded}><span className="quality-icon">!</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span><span className="quality-chevron">{expanded?'−':'+'}</span></button>{expanded&&<div className="quality-issue-body">{issue.sales?.length?<div className="quality-sales"><div className="quality-sales-head"><strong>Ventas afectadas</strong><span>{issue.sales.length} detectadas</span></div>{issue.sales.map(sale=><div className="quality-sale" key={sale.id}><div className="quality-sale-main"><strong>{sale.symbol}</strong><span>{date(sale.occurredAt)}</span><span>{qty(sale.quantity)} vendidos</span></div><div className="quality-sale-detail"><span>Venta: <b>{money(sale.proceeds)}</b></span><span>Coste no demostrable: <b>{qty(sale.missingQuantity)} {sale.symbol}</b></span><span>{sale.reason}</span></div><div className="quality-actions"><Link className="quality-action primary" href={`/dashboard/renta/revisar?asset=${encodeURIComponent(sale.symbol)}&before=${encodeURIComponent(sale.occurredAt)}&sale=${encodeURIComponent(sale.id)}`}>Revisar lote</Link><Link className="quality-action secondary" href="/dashboard/exchanges">Importar CSV que falta</Link></div></div>)}</div>:null}<div className="quality-help"><strong>Cómo resolverlo</strong><span>CoinRenta no inventa el coste. Revisa primero los movimientos anteriores del activo. Si la compra o depósito original no está importado, añade el CSV histórico del exchange y vuelve a importar; el control se recalculará automáticamente.</span></div>{issue.actionHref&&<div className="quality-actions"><Link className="quality-action primary" href={issue.actionHref}>{issue.actionLabel||'Resolver incidencia'}</Link></div>}</div>}</article>})}</div>}
+      {isPro===false&&!pro?<div className="quality-pro-locked"><strong>Detalle disponible en Pro</strong><span>El plan Free muestra el número de incidencias detectadas. Pasa a Pro para consultar cada incidencia, las operaciones afectadas y las herramientas para resolverlas.</span><Link className="quality-action primary" href="/dashboard/configuracion">Ver Pro</Link></div>:<div className="quality-list">{actionable.map(issue=>{const expanded=open===issue.code;return <article className="quality-issue quality-issue-action" key={issue.code}><button type="button" className="quality-issue-head" onClick={()=>setOpen(expanded?null:issue.code)} aria-expanded={expanded}><span className="quality-icon">!</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span><span className="quality-chevron">{expanded?'−':'+'}</span></button>{expanded&&<div className="quality-issue-body">{issue.sales?.length?<div className="quality-sales"><div className="quality-sales-head"><strong>Ventas afectadas</strong><span>{issue.sales.length} detectadas</span></div>{issue.sales.map(sale=><div className="quality-sale" key={sale.id}><div className="quality-sale-main"><strong>{sale.symbol}</strong><span>{date(sale.occurredAt)}</span><span>{qty(sale.quantity)} vendidos</span></div><div className="quality-sale-detail"><span>Venta: <b>{money(sale.proceeds)}</b></span><span>Coste no demostrable: <b>{qty(sale.missingQuantity)} {sale.symbol}</b></span><span>{sale.reason}</span></div><div className="quality-actions"><Link className="quality-action primary" href={`/dashboard/renta/revisar?asset=${encodeURIComponent(sale.symbol)}&before=${encodeURIComponent(sale.occurredAt)}&sale=${encodeURIComponent(sale.id)}`}>Revisar lote</Link><Link className="quality-action secondary" href="/dashboard/exchanges">Importar CSV que falta</Link></div></div>)}</div>:null}<div className="quality-help"><strong>Cómo resolverlo</strong><span>CoinRenta no inventa el coste. Revisa primero los movimientos anteriores del activo. Si la compra o depósito original no está importado, añade el CSV histórico del exchange y vuelve a importar; el control se recalculará automáticamente.</span></div>{issue.actionHref&&<div className="quality-actions"><Link className="quality-action primary" href={issue.actionHref}>{issue.actionLabel||'Resolver incidencia'}</Link></div>}</div>}</article>})}</div>}
     </div>}
     {informational.length>0&&<div className="quality-group quality-group-info"><div className="quality-group-head"><div><span className="section-kicker">INFORMACIÓN</span><h4>Datos que conviene conocer</h4></div><span className="quality-count quality-count-info">{informational.length}</span></div><div className="quality-list">{informational.map(issue=><article className="quality-issue quality-issue-info" key={issue.code}><div className="quality-issue-head static"><span className="quality-icon">i</span><span className="quality-issue-copy"><strong>{issue.title}</strong><small>{issue.description}</small></span></div></article>)}</div></div>}
     {!issues.length&&<div className="renta-ready"><strong>La información disponible pasa las comprobaciones básicas de integridad.</strong><span>No hay incidencias que requieran intervención. Aun así, la revisión final debe contrastarse con la documentación original de cada exchange.</span></div>}
