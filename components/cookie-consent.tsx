@@ -90,7 +90,7 @@ export default function CookieConsent() {
     <>
       {!firstVisit && !settingsOpen && (
         <button type="button" className="cr-cookie-manage" onClick={manage} aria-label="Gestionar preferencias de cookies" title="Gestionar preferencias de cookies">
-          <span className="cr-cookie-manage-icon" aria-hidden="true"><span className="cr-cookie-chip cr-cookie-chip-1" /><span className="cr-cookie-chip cr-cookie-chip-2" /><span className="cr-cookie-chip cr-cookie-chip-3" /><span className="cr-cookie-bite cr-cookie-bite-1" /><span className="cr-cookie-bite cr-cookie-bite-2" /><span className="cr-cookie-bite cr-cookie-bite-3" /></span>
+          <span className="cr-cookie-manage-emoji" aria-hidden="true">🍪</span>
         </button>
       )}
       {firstVisit && <div className="cr-cookie-backdrop" aria-hidden="true" />}
