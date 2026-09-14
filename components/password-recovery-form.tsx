@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+const SITE_URL = "https://coinrenta.es";
+
 export default function PasswordRecoveryForm() {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
@@ -18,12 +20,10 @@ export default function PasswordRecoveryForm() {
 
     try {
       const supabase = createClient();
-      const origin = window.location.origin;
       const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${origin}/auth/callback?next=/restablecer`,
+        redirectTo: `${SITE_URL}/auth/reset`,
       });
 
-      // Deliberadamente no revelamos si el correo existe para evitar enumeración de cuentas.
       if (recoveryError) {
         setError("No hemos podido procesar la solicitud. Comprueba el correo e inténtalo de nuevo.");
       } else {
