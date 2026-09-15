@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CSV_SUPPORTED_EXCHANGES, decodeExchangeCsv, normalizeExchangeCsv, type NormalizedMovement } from "@/lib/exchanges/csv";
+import { canonicalizeNormalizedMovements } from "@/lib/exchanges/canonicalize";
 import { repairAllCsvBalances } from "./balance-repair";
 
 const FIAT = new Set(["EUR", "USD", "GBP", "CHF", "PLN", "SEK", "DKK", "NOK", "AUD", "CAD", "JPY", "SGD"]);
@@ -87,7 +88,8 @@ export async function importCsvConnection(formData: FormData) {
   const perFile: { file: File; movements: NormalizedMovement[] }[] = [];
   const uniqueByKey = new Map<string, NormalizedMovement>();
   for (const file of files) {
-    const movements = normalizeExchangeCsv(exchangeCode, decodeExchangeCsv(await file.arrayBuffer()), file.name);
+    const parsed = normalizeExchangeCsv(exchangeCode, decodeExchangeCsv(await file.arrayBuffer()), file.name);
+    const movements = canonicalizeNormalizedMovements(parsed, exchangeCode);
     if (!movements.length) throw new Error(`No se han encontrado movimientos en ${file.name}.`);
     const local: NormalizedMovement[] = [];
     for (const movement of movements) {
@@ -146,7 +148,6 @@ export async function importCsvConnection(formData: FormData) {
     }
 
     await supabase.from("exchange_connections").update({ status: "active", last_sync_at: new Date().toISOString(), last_sync_status: "success", last_sync_error: null, updated_at: new Date().toISOString() }).eq("id", accountRef.connectionId).eq("user_id", user.id);
-    // A single reconciliation engine is responsible for all exchanges. This also repairs older imports.
     await repairAllCsvBalances();
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/exchanges");
