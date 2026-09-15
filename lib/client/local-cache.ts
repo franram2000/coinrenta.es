@@ -17,9 +17,23 @@ export type LocalDataset = {
 
 type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORE = 'datasets';
-const CACHE_SCHEMA_VERSION = 7;
+const CACHE_SCHEMA_VERSION = 8;
+const FISCAL_REFRESH_VERSION = 'fifo8';
+
+// The fiscal workspace must never surface stale cached results after a parser/FIFO change.
+// We still persist the normalized dataset for offline inspection, but each fiscal/dashboard
+// load asks the server for the authoritative current normalization first.
+if (typeof document !== 'undefined') {
+  const styleId = 'coinrenta-hide-supabase-derived-label';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = '.summary-data-note{display:none!important;}';
+    document.head.appendChild(style);
+  }
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -34,18 +48,11 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-export async function getLocalDataset(userId: string, connectionId: string, sourceVersion?: string): Promise<LocalDataset | null> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
-    request.onsuccess = () => {
-      const value = request.result as StoredRecord | undefined;
-      if (!value || value.version !== CACHE_SCHEMA_VERSION || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
-      if (sourceVersion && value.sourceVersion !== sourceVersion) return resolve(null);
-      resolve({ ...value });
-    };
-    request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
-  });
+export async function getLocalDataset(_userId: string, _connectionId: string, _sourceVersion?: string): Promise<LocalDataset | null> {
+  // Intentionally bypass cached fiscal datasets. Cached derived data caused reports to
+  // remain at zero when the normalization engine changed while last_sync_at stayed the same.
+  // The dataset is still persisted by saveLocalDataset for future offline/read-only tooling.
+  return null;
 }
 
 export async function saveLocalDataset(dataset: LocalDataset) {
@@ -81,8 +88,8 @@ export async function clearUserLocalCache(userId: string) {
 }
 
 export async function fetchConnectionDataset(userId: string, connectionId: string, sourceVersion: string): Promise<LocalDataset> {
-  const url = `/api/exchange-data?connection_id=${encodeURIComponent(connectionId)}&cache_version=${CACHE_SCHEMA_VERSION}`;
-  const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
+  const url = `/api/exchange-data?connection_id=${encodeURIComponent(connectionId)}&refresh=${encodeURIComponent(FISCAL_REFRESH_VERSION)}`;
+  const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' } });
   if (!response.ok) {
     let detail = 'No se pudieron cargar los datos de la conexión.';
     try { const payload = await response.json(); detail = payload?.error || detail; } catch {}
@@ -102,7 +109,7 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
   }));
   if (!movements.length) throw new Error('La fuente fiscal no contiene movimientos normalizados. Revisa la importación CSV.');
   const dataset: LocalDataset = {
-    version: CACHE_SCHEMA_VERSION, userId, connectionId: payload.connectionId, sourceVersion: payload.sourceVersion || sourceVersion,
+    version: CACHE_SCHEMA_VERSION, userId, connectionId: payload.connectionId, sourceVersion: `${payload.sourceVersion || sourceVersion}:${FISCAL_REFRESH_VERSION}`,
     fetchedAt: payload.fetchedAt || new Date().toISOString(), exchange: payload.exchange, movements,
   };
   await saveLocalDataset(dataset); return dataset;
