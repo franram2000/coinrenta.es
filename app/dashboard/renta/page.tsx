@@ -14,7 +14,6 @@ type Connection = { id: string; exchange_id: string };
 type Exchange = { id: string; code: string };
 
 const money = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
-const number = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("es-ES", { maximumFractionDigits: 8 });
 const date = (v: string | null | undefined) => v ? new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v)) : "—";
 const endOf = (year: number) => `${year + 1}-01-01T00:00:00.000Z`;
 
@@ -125,7 +124,7 @@ export default async function RentaPage({ searchParams }: { searchParams: Promis
     </section>
 
     <section className="renta-stat-grid">
-      <article className="stat-card"><span className="stat-label">Ganancia / pérdida</span>{isPro ? <><strong className={!report.gainKnown ? "renta-number-warning" : ""}>{money(report.gain)}</strong><span className="stat-note">{report.gainKnown ? "FIFO completo con los datos disponibles." : "Resultado provisional por incidencias pendientes."}</span></> : <><strong className="renta-pro-locked-value">Pro</strong><span className="stat-note">Resultado fiscal detallado disponible en Pro.</span>}</article>
+      <article className="stat-card"><span className="stat-label">Ganancia / pérdida</span>{isPro ? <><strong className={!report.gainKnown ? "renta-number-warning" : ""}>{money(report.gain)}</strong><span className="stat-note">{report.gainKnown ? "FIFO completo con los datos disponibles." : "Resultado provisional por incidencias pendientes."}</span></> : <><strong className="renta-pro-locked-value">Pro</strong><span className="stat-note">Resultado fiscal detallado disponible en Pro.</span></>}</article>
       <article className="stat-card"><span className="stat-label">Valor de transmisión</span><strong>{money(report.proceeds)}</strong><span className="stat-note">Ventas y permutas computables</span></article>
       <article className="stat-card"><span className="stat-label">Coste de adquisición</span><strong>{money(report.costBasis)}</strong><span className="stat-note">Lotes consumidos por FIFO</span></article>
       <article className="stat-card"><span className="stat-label">Incidencias</span><strong>{actionable.length}</strong><span className="stat-note">Requieren revisión</span></article>
