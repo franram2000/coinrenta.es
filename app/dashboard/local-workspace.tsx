@@ -69,8 +69,8 @@ function WorkspaceStyles() {
     .renta-framework-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:17px; }
     .renta-framework-grid > div { display:grid; gap:5px; padding:14px; border:1px solid var(--cr-border); border-radius:12px; background:rgba(255,255,255,.02); }
     .renta-framework-grid strong { font-size:11px; }
-    .renta-framework-grid span { color:#7D8BA0; font-size:10px; line-height:1.55; }
-    .renta-empty { min-height:180px; display:grid; place-items:center; padding:30px; text-align:center; color:#7D8BA0; font-size:12px; }
+    .renta-framework-grid span { color:#7D8DA0; font-size:10px; line-height:1.55; }
+    .renta-empty { min-height:180px; display:grid; place-items:center; padding:30px; text-align:center; color:#7D8DA0; font-size:12px; }
     .connection-error { padding:18px; border:1px solid rgba(231,106,106,.22); border-radius:14px; background:rgba(231,106,106,.06); color:#F0A0A0; font-size:12px; }
     .quality-actions { margin-top:12px; }
     .quality-action { display:inline-flex; padding:9px 12px; border-radius:9px; background:var(--cr-primary); color:white; font-size:11px; font-weight:800; }
@@ -79,7 +79,7 @@ function WorkspaceStyles() {
   `}</style>;
 }
 
-export default function LocalWorkspace({ userId, connections, mode, isPro, displayName, year = 2025 }: Props) {
+export default function LocalWorkspace({ userId, connections, mode, isPro, displayName, year = new Date().getFullYear() }: Props) {
   const [datasets, setDatasets] = useState<LocalDataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,9 +126,10 @@ export default function LocalWorkspace({ userId, connections, mode, isPro, displ
 
 function Renta({ report, year, isPro }: { report: FifoReport | null; year: number; isPro: boolean }) {
   const actionable = report ? report.unknownDisposals + report.valuationIssues + report.pendingTransfers : 0;
+  const years = Array.from({ length: 5 }, (_, index) => year - index);
   return <main className="dashboard-content workspace-page renta-page">
     <header className="app-topbar"><div><span className="topbar-kicker">CoinRenta</span><h1>Renta</h1><p className="workspace-subtitle">El cálculo fiscal se ejecuta sobre los datos guardados localmente en este dispositivo.</p></div></header>
-    <section className="renta-hero panel-card"><div><span className="section-kicker">EJERCICIO FISCAL</span><h2>Informe fiscal {year}</h2><p>Cambio de ejercicio sin consultar de nuevo el histórico al servidor.</p></div><nav className="renta-year-switcher" aria-label="Ejercicio fiscal">{[2025,2024,2023,2022].map((item)=><Link key={item} href={item===2025?'/dashboard/renta':`/dashboard/renta?year=${item}`} className={item===year?'selected':''}>{item}</Link>)}</nav></section>
+    <section className="renta-hero panel-card"><div><span className="section-kicker">EJERCICIO FISCAL</span><h2>Informe fiscal {year}</h2><p>Cambio de ejercicio sin consultar de nuevo el histórico al servidor.</p></div><nav className="renta-year-switcher" aria-label="Ejercicio fiscal">{years.map((item)=><Link key={item} href={item===new Date().getFullYear()?'/dashboard/renta':`/dashboard/renta?year=${item}`} className={item===year?'selected':''}>{item}</Link>)}</nav></section>
     <section className="renta-stat-grid"><article className="stat-card"><span className="stat-label">Ganancia / pérdida</span><strong className={report && !report.gainKnown?'renta-number-warning':''}>{isPro?money(report?.gain):'Pro'}</strong><span className="stat-note">{isPro?(report?.gainKnown?'FIFO completo':'Resultado provisional'):'Resultado fiscal detallado disponible en Pro.'}</span></article><article className="stat-card"><span className="stat-label">Valor de transmisión</span><strong>{money(report?.proceeds)}</strong><span className="stat-note">Ventas y permutas</span></article><article className="stat-card"><span className="stat-label">Coste FIFO</span><strong>{money(report?.costBasis)}</strong><span className="stat-note">Lotes históricos</span></article><article className="stat-card"><span className="stat-label">Incidencias</span><strong>{actionable}</strong><span className="stat-note">Requieren revisión</span></article></section>
     <section className="renta-section panel-card"><div className="panel-head"><h3>Ganancias y pérdidas patrimoniales</h3><span className="renta-badge">EUR · FIFO</span></div><div className="renta-summary-grid"><div><small>Transmisiones / permutas</small><strong>{report?.disposals ?? 0}</strong></div><div><small>Ganancia calculada</small><strong>{isPro?money(report?.gain):'Pro'}</strong></div><div><small>Ingresos identificados</small><strong>{money(report?.incomeEur)}</strong></div><div><small>Comisiones fiat</small><strong>{money(report?.feesEur)}</strong></div></div></section>
     <section className="renta-section panel-card"><div className="panel-head"><div><span className="section-kicker">PRIVACIDAD</span><h3>Datos de esta consulta</h3></div></div><div className="renta-summary-grid"><div><small>Fuente</small><strong>Cache local</strong></div><div><small>Servidor</small><strong>Sin movimientos derivados</strong></div><div><small>Histórico</small><strong>{report?.processedTransactions ?? 0} movimientos</strong></div><div><small>FIFO</small><strong>Español</strong></div></div><div className="renta-explanation"><strong>Arquitectura de datos</strong><span>Los CSV originales y las credenciales de API permanecen asociados a la conexión. Los movimientos normalizados, lotes FIFO, saldos e incidencias se reconstruyen y guardan en IndexedDB de este dispositivo.</span></div></section>
