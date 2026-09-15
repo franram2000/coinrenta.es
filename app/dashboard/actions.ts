@@ -20,14 +20,18 @@ export async function deleteExchangeConnection(formData: FormData) {
   if (!user) redirect("/login");
   const connectionId = String(formData.get("connection_id") || "").trim();
   if (!connectionId) return;
-  const { data: connection, error: connectionError } = await supabase.from("exchange_connections").select("id").eq("id", connectionId).eq("user_id", user.id).maybeSingle();
+  const { data: connection, error: connectionError } = await supabase.from("exchange_connections").select("id,provider_type,api_secret_id").eq("id", connectionId).eq("user_id", user.id).maybeSingle();
   if (connectionError) throw new Error(connectionError.message);
   if (!connection) throw new Error("Conexión no encontrada.");
+  if (String(connection.provider_type || "") === "api" && connection.api_secret_id) {
+    const { error: secretError } = await supabase.rpc("delete_exchange_secret", { p_connection_id: connectionId });
+    if (secretError) throw new Error(`No se pudo eliminar de forma segura la clave API: ${secretError.message}`);
+  }
   const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id").eq("connection_id", connectionId).eq("user_id", user.id);
   if (accountsError) throw new Error(accountsError.message);
   const accountIds = (accounts || []).map((account: { id: string }) => account.id);
   if (accountIds.length) {
-    for (const table of ["balance_snapshots", "imports", "transactions"]) {
+    for (const table of ["balance_snapshots", "transactions", "imports"]) {
       const { error } = await supabase.from(table).delete().eq("user_id", user.id).in("account_id", accountIds);
       if (error) throw new Error(`No se pudo borrar ${table}: ${error.message}`);
     }
@@ -51,45 +55,28 @@ export async function updateProfile(formData: FormData) {
 
 export async function adminUpdateUser(formData: FormData) {
   const { supabase, user } = await requireAdmin();
-  const targetId = String(formData.get("user_id") || "").trim();
-  const role = String(formData.get("role") || "free").trim();
-  const isActive = String(formData.get("is_active") || "true") === "true";
-  if (!targetId) throw new Error("Usuario no encontrado");
-  if (!["free", "pro", "admin"].includes(role)) throw new Error("Plan/rol no válido");
+  const targetId = String(formData.get("user_id") || "").trim(); const role = String(formData.get("role") || "free").trim(); const isActive = String(formData.get("is_active") || "true") === "true";
+  if (!targetId) throw new Error("Usuario no encontrado"); if (!["free", "pro", "admin"].includes(role)) throw new Error("Plan/rol no válido");
   if (targetId === user.id && (role !== "admin" || !isActive)) throw new Error("No puedes quitarte o desactivar tus propios permisos de administrador.");
-
   const { data: target, error: targetError } = await supabase.from("profiles").select("id,role,is_active").eq("id", targetId).maybeSingle();
-  if (targetError) throw new Error(targetError.message);
-  if (!target) throw new Error("El usuario no existe.");
-
+  if (targetError) throw new Error(targetError.message); if (!target) throw new Error("El usuario no existe.");
   if (target.role === "admin" && (role !== "admin" || !isActive)) {
     const { count, error: countError } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin").eq("is_active", true);
-    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`);
-    if ((count ?? 0) <= 1) throw new Error("Debe existir al menos un administrador activo.");
+    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`); if ((count ?? 0) <= 1) throw new Error("Debe existir al menos un administrador activo.");
   }
-
-  const { error } = await supabase.from("profiles").update({ role, is_active: isActive }).eq("id", targetId);
-  if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
+  const { error } = await supabase.from("profiles").update({ role, is_active: isActive }).eq("id", targetId); if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
   revalidatePath("/dashboard/usuarios"); revalidatePath("/dashboard");
 }
 
 export async function adminDeleteUser(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
-  const targetId = String(formData.get("user_id") || "").trim();
-  if (!targetId) throw new Error("Usuario no encontrado");
-  if (targetId === user.id) throw new Error("No puedes eliminar tu propia cuenta de administrador.");
-
+  const { supabase, user } = await requireAdmin(); const targetId = String(formData.get("user_id") || "").trim();
+  if (!targetId) throw new Error("Usuario no encontrado"); if (targetId === user.id) throw new Error("No puedes eliminar tu propia cuenta de administrador.");
   const { data: target, error: targetError } = await supabase.from("profiles").select("id,role,is_active").eq("id", targetId).maybeSingle();
-  if (targetError) throw new Error(targetError.message);
-  if (!target) throw new Error("El usuario no existe.");
+  if (targetError) throw new Error(targetError.message); if (!target) throw new Error("El usuario no existe.");
   if (target.role === "admin" && target.is_active !== false) {
     const { count, error: countError } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin").eq("is_active", true);
-    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`);
-    if ((count ?? 0) <= 1) throw new Error("No puedes eliminar al único administrador activo.");
+    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`); if ((count ?? 0) <= 1) throw new Error("No puedes eliminar al único administrador activo.");
   }
-
-  // La gestión funciona sin una service role key: eliminar equivale a revocar el acceso de la cuenta.
-  const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", targetId);
-  if (error) throw new Error(`No se pudo desactivar el usuario: ${error.message}`);
+  const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", targetId); if (error) throw new Error(`No se pudo desactivar el usuario: ${error.message}`);
   revalidatePath("/dashboard/usuarios"); revalidatePath("/dashboard");
 }
