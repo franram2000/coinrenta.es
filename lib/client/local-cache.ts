@@ -23,7 +23,7 @@ export type LocalMovement = {
 };
 
 export type LocalDataset = {
-  version: 3;
+  version: 4;
   userId: string;
   connectionId: string;
   sourceVersion: string;
@@ -34,7 +34,7 @@ export type LocalDataset = {
 
 type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'datasets';
 
 function openDb(): Promise<IDBDatabase> {
@@ -56,7 +56,11 @@ export async function getLocalDataset(userId: string, connectionId: string): Pro
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
     request.onsuccess = () => {
       const value = request.result as StoredRecord | undefined;
-      if (!value || value.version !== 3 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
+      // Version 4 deliberately invalidates every previous client cache so the fiscal
+      // engine is rebuilt from the current server-side CSV source. This is important
+      // after changes to normalization/canonicalization: an old cache can contain
+      // movements in a shape that no longer matches the current FIFO rules.
+      if (!value || value.version !== 4 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
       resolve({ ...value });
     };
     request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
@@ -132,7 +136,7 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
     accountId: movement.accountId || null,
   }));
   const dataset: LocalDataset = {
-    version: 3,
+    version: 4,
     userId,
     connectionId: payload.connectionId,
     sourceVersion: payload.sourceVersion || sourceVersion,
