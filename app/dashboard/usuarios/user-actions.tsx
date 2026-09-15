@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { adminDeleteUser, adminUpdateUser } from "../actions";
 
 type Props = { userId: string; role: string | null; isActive: boolean; label: string; isSelf: boolean };
+
+type AdminAction = typeof adminUpdateUser | typeof adminDeleteUser;
 
 export default function UserActions({ userId, role, isActive, label, isSelf }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState(role || "free");
 
-  function run(action: typeof adminUpdateUser | typeof adminDeleteUser, data: Record<string, string>, success: string) {
+  function run(action: AdminAction, data: Record<string, string>, success: string) {
     setMessage(null);
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => formData.set(key, value));
@@ -29,7 +31,7 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
     run(adminUpdateUser, { user_id: userId, role: role || "free", is_active: isActive ? "false" : "true" }, isActive ? "Cuenta desactivada." : "Cuenta reactivada.");
   }
 
-  function saveRole(event: React.FormEvent<HTMLFormElement>) {
+  function saveRole(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     run(adminUpdateUser, { user_id: userId, role: selectedRole, is_active: isActive ? "true" : "false" }, "Cambios guardados.");
   }
