@@ -12,7 +12,8 @@ export default async function RentaPage({ searchParams }: { searchParams: Promis
   if (!user) redirect('/login');
   const params = await searchParams;
   const requested = Number(params.year);
-  const year = Number.isInteger(requested) && requested >= 2020 && requested <= 2030 ? requested : 2025;
+  const currentYear = new Date().getFullYear();
+  const year = Number.isInteger(requested) && requested >= 2020 && requested <= currentYear ? requested : currentYear;
   const [{ data: profile }, { data: rows, error }] = await Promise.all([
     supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
     supabase.from('exchange_connections').select('id,label,provider_type,status,last_sync_at,last_sync_status,exchange_id,exchanges(code,name)').eq('user_id', user.id).order('updated_at', { ascending: false }),
