@@ -23,7 +23,7 @@ export type LocalMovement = {
 };
 
 export type LocalDataset = {
-  version: 2;
+  version: 3;
   userId: string;
   connectionId: string;
   sourceVersion: string;
@@ -34,7 +34,7 @@ export type LocalDataset = {
 
 type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'datasets';
 
 function openDb(): Promise<IDBDatabase> {
@@ -56,7 +56,8 @@ export async function getLocalDataset(userId: string, connectionId: string): Pro
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
     request.onsuccess = () => {
       const value = request.result as StoredRecord | undefined;
-      resolve(value ? { ...value } : null);
+      if (!value || value.version !== 3) return resolve(null);
+      resolve({ ...value });
     };
     request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
   });
@@ -121,16 +122,23 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
     exchange: string;
     sourceVersion: string;
     fetchedAt: string;
-    movements: LocalMovement[];
+    movements: Array<LocalMovement & { externalId?: string; raw?: { sourceFile?: string; sourceExchange?: string; row?: Record<string, string> } }>;
   };
+  const movements: LocalMovement[] = (payload.movements || []).map((movement, index) => ({
+    ...movement,
+    id: movement.id || movement.externalId || `${payload.connectionId}:${movement.occurredAt}:${movement.transactionType}:${index}`,
+    sourceFile: movement.sourceFile || movement.raw?.sourceFile || null,
+    exchange: movement.exchange || movement.raw?.sourceExchange || payload.exchange,
+    accountId: movement.accountId || null,
+  }));
   const dataset: LocalDataset = {
-    version: 2,
+    version: 3,
     userId,
     connectionId: payload.connectionId,
     sourceVersion: payload.sourceVersion || sourceVersion,
     fetchedAt: payload.fetchedAt || new Date().toISOString(),
     exchange: payload.exchange,
-    movements: payload.movements,
+    movements,
   };
   await saveLocalDataset(dataset);
   return dataset;
@@ -179,7 +187,10 @@ export function datasetToFifo(dataset: LocalDataset): { txs: FifoTx[]; assets: M
 export function mergeDatasets(datasets: LocalDataset[]) {
   const byId = new Map<string, LocalMovement>();
   for (const dataset of datasets) {
-    for (const movement of dataset.movements) byId.set(movement.id, movement);
+    for (const movement of dataset.movements) {
+      const id = movement.id || `${dataset.connectionId}:${movement.occurredAt}:${movement.transactionType}:${movement.baseAsset || ''}:${movement.baseAmount ?? ''}`;
+      byId.set(id, { ...movement, id });
+    }
   }
   return [...byId.values()].sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime() || a.id.localeCompare(b.id));
 }
