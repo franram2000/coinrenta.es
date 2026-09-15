@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeExchangeCsv, type NormalizedMovement, type NormalizedLeg } from "@/lib/exchanges/csv";
+import { canonicalizeNormalizedMovements } from "@/lib/exchanges/canonicalize";
 
 const FIAT = new Set(["EUR", "USD", "GBP", "CHF", "PLN", "SEK", "DKK", "NOK", "AUD", "CAD", "JPY", "SGD"]);
 type AnyRecord = Record<string, unknown>;
@@ -29,7 +30,7 @@ async function repairAccount(supabase: any, userId: string, accountId: string, e
   const parsedRows: { sequence: number; at: number; movement: NormalizedMovement; ids: { base: string | null; quote: string | null; fee: string | null }; raw: AnyRecord }[] = [];
   for (let sequence = 0; sequence < (rows || []).length; sequence += 1) {
     const tx = rows[sequence] as AnyRecord; const raw = (tx.raw_data && typeof tx.raw_data === "object" ? tx.raw_data : {}) as AnyRecord; const sourceRow = (raw.row && typeof raw.row === "object" ? raw.row : {}) as Record<string, string>; const sourceFile = String(raw.sourceFile || ""); let movement: NormalizedMovement | null = null;
-    try { if (Object.keys(sourceRow).length) movement = normalizeExchangeCsv(exchangeCode, toCsv([sourceRow]), sourceFile)[0] || null; } catch { movement = null; }
+    try { if (Object.keys(sourceRow).length) movement = canonicalizeNormalizedMovements(normalizeExchangeCsv(exchangeCode, toCsv([sourceRow]), sourceFile), exchangeCode)[0] || null; } catch { movement = null; }
     let idsForRow = { base: tx.base_asset_id ? String(tx.base_asset_id) : null, quote: tx.quote_asset_id ? String(tx.quote_asset_id) : null, fee: tx.fee_asset_id ? String(tx.fee_asset_id) : null };
     if (movement) {
       idsForRow = { base: movement.baseAsset ? await resolveAssetId(supabase, movement.baseAsset, assetById) : null, quote: movement.quoteAsset ? await resolveAssetId(supabase, movement.quoteAsset, assetById) : null, fee: movement.feeAsset ? await resolveAssetId(supabase, movement.feeAsset, assetById) : null };
