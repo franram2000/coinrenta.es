@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { updateProfile } from '../actions';
@@ -10,6 +9,7 @@ import LocalWorkspace, { type LocalConnection } from '../local-workspace';
 const sections: Record<string, { title: string; description: string }> = {
   exchanges: { title: 'Conexiones', description: 'Gestiona tus exchanges e importa sus movimientos mediante CSV.' },
   movimientos: { title: 'Movimientos', description: 'Consulta los movimientos normalizados desde la caché local del dispositivo.' },
+  renta: { title: 'Renta', description: 'Revisa los datos fiscales calculados localmente.' },
   fiscalidad: { title: 'Fiscalidad', description: 'Revisa los datos fiscales calculados localmente.' },
   configuracion: { title: 'Configuración', description: 'Gestiona tu perfil y tu suscripción.' },
 };
@@ -24,7 +24,7 @@ function one<T>(value: T | T[] | null | undefined): T | null { return Array.isAr
 function date(value: string | null) { return value ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—'; }
 function status(value: string | null) { if (value === 'error') return 'Error'; if (value === 'pending') return 'Pendiente'; if (value === 'active') return 'Conectado'; return 'Desactivado'; }
 
-export default async function DashboardSection({ params }: { params: Promise<{ section: string }> }) {
+export default async function DashboardSection({ params, searchParams }: { params: Promise<{ section: string }>; searchParams?: Promise<{ year?: string }> }) {
   const { section } = await params;
   const item = sections[section];
   if (!item) notFound();
@@ -41,14 +41,17 @@ export default async function DashboardSection({ params }: { params: Promise<{ s
     return <><SectionHeader item={item}/><section className="dashboard-content connections-page"><div className="exchange-hero panel-card"><div className="exchange-hero-copy"><span className="section-kicker">Conexiones</span><h3>Importa tus exchanges</h3><p>Los CSV originales se almacenan en el servidor. Los movimientos normalizados, saldos y cálculos fiscales se guardan solo en tu dispositivo.</p></div><ExchangeManager exchanges={(exchanges || []) as any[]} connections={(connections || []) as any[]}/></div><div className="panel-card connections-panel"><div className="panel-head"><div><span className="section-kicker">TUS CONEXIONES</span><h3>{connections?.length || 0} {(connections?.length || 0) === 1 ? 'conexión' : 'conexiones'}</h3></div></div>{connections?.length ? <div className="connected-exchanges">{connections.map((connection: any) => { const exchange = one(connection.exchanges); return <article className={`connected-exchange-card connected-exchange-${String(exchange?.code || 'exchange').toLowerCase()}`} key={connection.id}><div className="connected-exchange-head"><div className="connected-exchange-brand"><span className="connected-exchange-logo">{String(exchange?.name || 'E').slice(0,1).toUpperCase()}</span><div><strong>{exchange?.name || 'Exchange'}</strong><span>{connection.label || 'Cuenta principal'}</span></div></div><span className={`connection-status connection-status-${status(connection.status).toLowerCase()}`}><i/>{status(connection.status)}</span></div><div className="connected-exchange-info"><div><small>Método</small><strong>{connection.provider_type === 'csv' ? 'CSV · fuente original' : 'API · credencial protegida'}</strong></div><div><small>Última actualización</small><strong>{date(connection.last_sync_at)}</strong></div></div>{connection.last_sync_error && <div className="connection-error">{connection.last_sync_error}</div>}<div className="connected-exchange-footer"><span>{connection.provider_type === 'csv' ? 'CSV original almacenado' : 'Clave API protegida en Vault'}</span><DeleteConnectionButton userId={user.id} connectionId={connection.id}/></div></article>; })}</div> : <div className="connected-exchanges-empty"><strong>Aún no tienes conexiones.</strong><span>Añade un exchange e importa su histórico.</span></div>}</div></section></>;
   }
 
-  if (section === 'movimientos' || section === 'fiscalidad') {
+  if (section === 'movimientos' || section === 'fiscalidad' || section === 'renta') {
     const [{ data: profile }, { data: rows, error }] = await Promise.all([
-      supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
+      supabase.from('profiles').select('role,display_name').eq('id', user.id).maybeSingle(),
       supabase.from('exchange_connections').select('id,label,provider_type,status,last_sync_at,last_sync_status,exchange_id,exchanges(code,name)').eq('user_id', user.id).order('updated_at', { ascending: false }),
     ]);
     if (error) throw new Error(error.message);
     const connections: LocalConnection[] = (rows || []).map((row: any) => { const exchange = one(row.exchanges); return { id: String(row.id), label: row.label || null, provider_type: row.provider_type || null, status: row.status || null, last_sync_at: row.last_sync_at || null, last_sync_status: row.last_sync_status || null, exchange: String(exchange?.code || 'exchange').toLowerCase(), exchangeName: String(exchange?.name || 'Exchange') }; });
-    return <LocalWorkspace userId={user.id} connections={connections} mode={section} isPro={profile?.role === 'pro' || profile?.role === 'admin'} />;
+    const requestedYear = Number((await searchParams)?.year);
+    const year = Number.isInteger(requestedYear) && requestedYear >= 2018 && requestedYear <= new Date().getFullYear() + 1 ? requestedYear : new Date().getFullYear();
+    const mode = section === 'renta' ? 'renta' : section;
+    return <LocalWorkspace userId={user.id} connections={connections} mode={mode} isPro={profile?.role === 'pro' || profile?.role === 'admin'} displayName={profile?.display_name || null} year={year} />;
   }
 
   const { data: profile } = await supabase.from('profiles').select('display_name,country_code,timezone,role').eq('id', user.id).maybeSingle();
