@@ -4,7 +4,6 @@ import { useState, useTransition, type FormEvent } from "react";
 import { adminDeleteUser, adminUpdateUser } from "../actions";
 
 type Props = { userId: string; role: string | null; isActive: boolean; label: string; isSelf: boolean };
-
 type AdminAction = typeof adminUpdateUser | typeof adminDeleteUser;
 
 export default function UserActions({ userId, role, isActive, label, isSelf }: Props) {
@@ -17,18 +16,13 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => formData.set(key, value));
     startTransition(async () => {
-      try {
-        await action(formData);
-        setMessage(success);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "No se pudo completar la operación.");
-      }
+      try { await action(formData); setMessage(success); } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo completar la operación."); }
     });
   }
 
   function toggleActive() {
     if (isSelf) return;
-    run(adminUpdateUser, { user_id: userId, role: role || "free", is_active: isActive ? "false" : "true" }, isActive ? "Cuenta desactivada." : "Cuenta reactivada.");
+    run(adminUpdateUser, { user_id: userId, role: role || "free", is_active: isActive ? "false" : "true" }, isActive ? "Acceso desactivado." : "Acceso reactivado.");
   }
 
   function saveRole(event: FormEvent<HTMLFormElement>) {
@@ -37,21 +31,20 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
   }
 
   function remove() {
-    if (isSelf || !window.confirm(`¿Eliminar definitivamente la cuenta de ${label}? Esta acción no se puede deshacer.`)) return;
-    run(adminDeleteUser, { user_id: userId }, "Usuario eliminado.");
+    if (isSelf || !window.confirm(`¿Revocar el acceso de ${label}? Podrás reactivarlo después.`)) return;
+    run(adminDeleteUser, { user_id: userId }, "Acceso revocado.");
   }
 
   return (
     <div className="user-actions" aria-live="polite">
-      <button className="user-action" type="button" disabled={pending || isSelf} onClick={toggleActive} title={isSelf ? "No puedes desactivar tu propia cuenta" : undefined}>{isActive ? "Desactivar" : "Reactivar"}</button>
+      <button className="user-action" type="button" disabled={pending || isSelf} onClick={toggleActive}>{isActive ? "Desactivar" : "Reactivar"}</button>
       <form onSubmit={saveRole}>
-        <input type="hidden" name="user_id" value={userId} />
         <select className="user-role-select" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)} aria-label={`Plan o rol de ${label}`} disabled={pending}>
           <option value="free">Free</option><option value="pro">Pro</option><option value="admin">Admin</option>
         </select>
         <button className="user-action user-action-save" type="submit" disabled={pending}>Guardar</button>
       </form>
-      <button className="user-action user-action-delete" type="button" disabled={pending || isSelf} onClick={remove} title={isSelf ? "No puedes eliminar tu propia cuenta" : undefined}>Eliminar</button>
+      <button className="user-action user-action-delete" type="button" disabled={pending || isSelf} onClick={remove}>Revocar acceso</button>
       {message && <span className="user-action-message">{message}</span>}
     </div>
   );
