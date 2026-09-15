@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import CoinRentaLogo from "@/components/coinrenta-logo";
+import CoinRentaLoader from "@/components/coinrenta-loader";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "register";
@@ -26,12 +27,15 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       if (isRegister) {
         const { data, error: signupError } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { display_name: displayName.trim() || null }, emailRedirectTo: `${SITE_URL}/verificar-correo` } });
         if (signupError) setError(signupError.message || "No hemos podido crear la cuenta.");
-        else if (data.session) { window.location.assign("/dashboard"); return; }
-        else setMessage("Cuenta creada. Revisa tu correo para confirmar la dirección antes de entrar.");
+        else if (data.session) {
+          try { window.sessionStorage.setItem("coinrenta_pending_entry", "1"); } catch {}
+          window.location.assign("/dashboard?intro=1"); return;
+        } else setMessage("Cuenta creada. Revisa tu correo para confirmar la dirección antes de entrar.");
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (loginError) { setError("Correo o contraseña incorrectos."); return; }
-        window.location.assign("/dashboard"); return;
+        try { window.sessionStorage.setItem("coinrenta_pending_entry", "1"); } catch {}
+        window.location.assign("/dashboard?intro=1"); return;
       }
     } catch { setError(isRegister ? "No hemos podido crear la cuenta. Comprueba tu conexión e inténtalo de nuevo." : "No hemos podido iniciar sesión. Comprueba tu conexión e inténtalo de nuevo."); }
     finally { setPending(false); }
@@ -39,6 +43,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <main className="auth-page">
+      {pending && <CoinRentaLoader duration={20000} />}
       <style>{`
         .auth-page{min-height:100dvh;width:100%;overflow-x:hidden}.auth-layout{width:min(1120px,calc(100% - 48px));min-height:100dvh;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(390px,470px);align-items:center;gap:72px;padding:44px 0}.auth-brand-panel{min-width:0}.auth-brand-copy{max-width:600px}.auth-brand-copy h1{max-width:560px}.auth-brand-copy p{max-width:520px}.auth-trust-row{display:flex;flex-wrap:wrap;gap:9px 18px}.auth-card{width:100%;min-width:0}.auth-form{width:100%}.field{min-width:0}.field input{width:100%;min-width:0}.auth-card-head h2{overflow-wrap:anywhere}.form-alert,.form-note{overflow-wrap:anywhere}.auth-switch{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;text-align:center}.auth-submit{width:100%}.auth-brand-panel .coinrenta-logo-compact .coinrenta-logo-mark img{width:44px;height:44px;object-fit:contain;object-position:center;display:block}
         @media(max-width:920px){.auth-layout{grid-template-columns:1fr;gap:28px;max-width:620px;padding:32px 0 42px}.auth-brand-panel{text-align:center}.auth-brand-panel>.auth-brand-copy{margin:24px auto 0}.auth-trust-row{justify-content:center}.auth-card{max-width:520px;margin:0 auto}.auth-glow-one,.auth-glow-two{opacity:.65}}
@@ -60,7 +65,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <label className="field"><span>Contraseña</span><input name="password" type="password" autoComplete={isRegister ? "new-password" : "current-password"} required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" /></label>
             {!isRegister && <div className="auth-forgot"><Link href="/recuperar">¿Has olvidado tu contraseña?</Link></div>}
             {error && <p className="form-alert form-alert-error" role="alert">{error}</p>}{message && <p className="form-alert form-alert-success" role="status">{message}</p>}
-            <button className="btn btn-primary auth-submit" type="submit" disabled={pending}>{pending ? "Procesando…" : isRegister ? "Crear cuenta" : "Iniciar sesión"}</button>
+            <button className="btn btn-primary auth-submit" type="submit" disabled={pending}>{pending ? "Preparando CoinRenta…" : isRegister ? "Crear cuenta" : "Iniciar sesión"}</button>
             {isRegister && <p className="form-note">Al crear la cuenta aceptas utilizar CoinRenta bajo tu propia responsabilidad fiscal. La aplicación no sustituye el asesoramiento de un profesional.</p>}
           </form>
           <div className="auth-switch"><span>{isRegister ? "¿Ya tienes una cuenta?" : "¿Todavía no tienes una cuenta?"}</span><Link href={isRegister ? "/login" : "/registro"}>{isRegister ? "Iniciar sesión" : "Crear cuenta"}</Link></div>
