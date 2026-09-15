@@ -44,30 +44,28 @@ function inferType(movement: NormalizedMovement) {
   const original = normalizedText(movement.originalType);
   const description = normalizedText(raw(movement, [
     "Description", "Notes", "Remark", "Details", "Subtype", "Sub Type", "Activity", "Operation", "Business Type", "BusinessType",
-    "Transaction Subtype", "Transaction Sub Type", "Product", "Category",
+    "Transaction Subtype", "Transaction Sub Type", "Product", "Category", "Reason", "Memo", "Reference",
   ]));
   const combined = `${original} ${description}`;
   const direction = normalizedText(raw(movement, ["In/Out", "Direction", "Flow", "Cash Flow", "Credit/Debit"]));
 
   if (/transfer\s+stake|stake\s+transfer|staking\s+allocation|stake\s+in/.test(combined)) return "transfer_in";
   if (/transfer\s+unstake|unstake\s+transfer|staking\s+deallocation|stake\s+out/.test(combined)) return "transfer_out";
-  if (/\bsell\b|sold|sale|venta|vendido|vendida|sell\s+crypto|crypto\s+sale/.test(combined)) return "sell";
-  if (/\bbuy\b|bought|purchase|purchased|compra|comprado|comprada|crypto\s+purchase/.test(combined)) return "buy";
-  if (/swap|convert|conversion|convertir|trade|exchange|conversion\s+of\s+assets|asset\s+exchange|crypto\s+to\s+crypto/.test(combined)) return "trade";
-  if (/withdraw|withdrawal|cash\s*out|cashout|retirada|retiro|debit|send\s+out|sent\s+to/.test(combined)) return "withdrawal";
-  if (/deposit|cash\s*in|cashin|entrada|deposito|depositado|receive|received|received\s+from|credit|incoming/.test(combined)) return "deposit";
+  if (/\bsell\b|sold|sale|venta|vendido|vendida|sell\s+crypto|crypto\s+sale|liquidat/.test(combined)) return "sell";
+  if (/\bbuy\b|bought|purchase|purchased|compra|comprado|comprada|crypto\s+purchase|acquir/.test(combined)) return "buy";
+  if (/swap|convert|conversion|convertir|trade|exchange|conversion\s+of\s+assets|asset\s+exchange|crypto\s+to\s+crypto|intercambio|permuta/.test(combined)) return "trade";
+  if (/withdraw|withdrawal|cash\s*out|cashout|retirada|retiro|debit|send\s+out|sent\s+to|envio|envío/.test(combined)) return "withdrawal";
+  if (/deposit|cash\s*in|cashin|entrada|deposito|depositado|receive|received|received\s+from|credit|incoming|ingreso/.test(combined)) return "deposit";
   if (/reward|rewards|bonus|referral|airdrop|fork|staking\s+reward|earn\s+reward|campaign/.test(combined)) return /cashback/.test(combined) ? "cashback" : "reward";
-  if (/interest|yield|interes|apr|apy/.test(combined)) return "interest";
+  if (/interest|yield|interes|apr|apy|rendimiento/.test(combined)) return "interest";
   if (/dividend|dividendo|income/.test(combined)) return "income";
-  if (/fee|fees|commission|comision|comisi[oó]n|network\s+fee|trading\s+fee/.test(combined)) return "fee";
-  if (/cashback/.test(combined)) return "cashback";
-  if (/card\s*payment|payment\s*card|card\s*spend|card\s*purchase|pago\s+tarjeta|spend|expense|merchant\s+payment/.test(combined)) return "expense";
+  if (/fee|fees|commission|comision|comisi[oó]n|network\s+fee|trading\s+fee|tarifa/.test(combined)) return "fee";
+  if (/cashback|devolucion|devolución/.test(combined)) return "cashback";
+  if (/card\s*payment|payment\s*card|card\s*spend|card\s*purchase|pago\s+tarjeta|spend|expense|merchant\s+payment|compra\s+tarjeta/.test(combined)) return "expense";
   if (/out|debit|salida|sent|send/.test(direction)) return "withdrawal";
   if (/in|credit|entrada|received|receive/.test(direction)) return "deposit";
 
-  // A row with a trading side and a pair is economically a trade even when the
-  // provider gives us a proprietary operation label.
-  const side = normalizedText(raw(movement, ["Side", "Trade Side"]));
+  const side = normalizedText(raw(movement, ["Side", "Trade Side", "Order Side"]));
   const pair = raw(movement, ["Pair", "Market", "Trading Pair", "Instrument", "Symbol"]);
   if (pair && /^(buy|sell)$/.test(side)) return side;
 
@@ -80,7 +78,7 @@ function isCashProxy(asset: string | null) {
 }
 
 function pairFromRaw(movement: NormalizedMovement) {
-  const pair = raw(movement, ["Pair", "Market", "Trading Pair", "Instrument"]);
+  const pair = raw(movement, ["Pair", "Market", "Trading Pair", "Instrument", "Symbol"]);
   const base = normalizeAsset(raw(movement, ["Base Asset", "Base Coin", "Underlying Asset"]));
   const quote = normalizeAsset(raw(movement, ["Quote Asset", "Quote Coin", "Settlement Asset"]));
   if (base && quote) return { base, quote, inferred: false };
@@ -95,36 +93,70 @@ function pairFromRaw(movement: NormalizedMovement) {
   return { base: "", quote: "", inferred: false };
 }
 
+function positiveNumber(value: number | null) {
+  return value !== null && Number.isFinite(value) && Math.abs(value) > 0;
+}
+
 function movementIssues(next: NormalizedMovement, original: string, type: string, pair: { base: string; quote: string; inferred: boolean }): ReviewIssue[] {
   const issues: ReviewIssue[] = [];
   const hasDate = Boolean(next.occurredAt) && Number.isFinite(new Date(next.occurredAt).getTime());
-  const hasBase = Boolean(next.baseAsset) && next.baseAmount !== null && Math.abs(Number(next.baseAmount)) > 0;
-  const hasAnyAmount = next.baseAmount !== null || next.quoteAmount !== null || next.feeAmount !== null;
+  const hasBase = Boolean(next.baseAsset) && positiveNumber(next.baseAmount);
+  const hasAnyAmount = positiveNumber(next.baseAmount) || positiveNumber(next.quoteAmount) || positiveNumber(next.feeAmount);
   const isTrade = ["buy", "sell", "trade", "exchange", "convert", "swap"].includes(type);
+  const base = normalizeAsset(next.baseAsset);
+  const quote = normalizeAsset(next.quoteAsset);
+  const fee = normalizeAsset(next.feeAsset);
 
-  if (!hasDate) issues.push({ code: "missing_date", severity: "blocking", message: "No se ha podido determinar la fecha y hora del movimiento.", field: "fecha", hint: "Introduce la fecha exacta del movimiento." });
-  if (!original || original === "unknown") issues.push({ code: "missing_operation", severity: "blocking", message: "El tipo de operación no está identificado de forma fiable.", field: "tipo", hint: "Selecciona qué operación representa este movimiento." });
-  if (type === "other" || type === "unknown") issues.push({ code: "unsupported_operation", severity: "blocking", message: "La operación no coincide con ningún patrón fiscal conocido.", field: "tipo", hint: "Selecciona manualmente la categoría correcta para enseñar al motor cómo tratarla." });
-  if (!hasBase && !next.quoteAsset) issues.push({ code: "missing_asset", severity: "blocking", message: "No se ha podido identificar el activo principal del movimiento.", field: "activo", hint: "Selecciona el activo al que corresponde la operación." });
-  if (!hasAnyAmount) issues.push({ code: "missing_amount", severity: "blocking", message: "No se ha podido identificar ninguna cantidad utilizable.", field: "cantidad", hint: "Introduce la cantidad exacta del activo." });
-  if (next.baseAsset && next.baseAmount === null && !["expense"].includes(type)) issues.push({ code: "missing_base_amount", severity: "blocking", message: `Falta la cantidad de ${next.baseAsset}.`, field: "cantidad", hint: "Introduce la cantidad que entra o sale." });
-  if (isTrade && !next.baseAsset && pair.base) issues.push({ code: "inferred_base", severity: "info", message: `El activo ${pair.base} se ha inferido a partir del par ${pair.quote}.`, field: "activo" });
-  if (isTrade && !next.quoteAsset && pair.quote) issues.push({ code: "inferred_quote", severity: "info", message: `La contrapartida ${pair.quote} se ha inferido a partir del par de mercado.`, field: "contrapartida" });
+  if (!hasDate) issues.push({ code: "missing_date", severity: "blocking", message: "Falta la fecha de la operación.", field: "fecha", hint: "Revisa la fecha que figura en el CSV." });
+  if (!original || original === "unknown") issues.push({ code: "missing_operation", severity: "blocking", message: "No he podido saber qué operación es esta.", field: "tipo", hint: "Indica si fue una compra, venta, permuta, transferencia, recompensa u otra operación." });
+  if (type === "other" || type === "unknown") issues.push({ code: "unsupported_operation", severity: "blocking", message: "El movimiento tiene un tipo que todavía no reconozco.", field: "tipo", hint: "Elige la operación que corresponda y quedará guardada como corrección." });
+  if (!hasBase && !next.quoteAsset) issues.push({ code: "missing_asset", severity: "blocking", message: "No he podido identificar el activo afectado.", field: "activo", hint: "Indica el activo que entra o sale en esta operación." });
+  if (!hasAnyAmount) issues.push({ code: "missing_amount", severity: "blocking", message: "Falta el importe o la cantidad del movimiento.", field: "cantidad", hint: "Comprueba la cantidad en el extracto y añádela." });
+  if (next.baseAsset && next.baseAmount === null && type !== "expense") issues.push({ code: "missing_base_amount", severity: "blocking", message: `Falta la cantidad de ${base}.`, field: "cantidad", hint: "Introduce la cantidad exacta del activo." });
+
   if (isTrade && (!next.quoteAsset || next.quoteAmount === null) && !pair.quote) {
-    issues.push({ code: "missing_counterparty", severity: "blocking", message: "La operación parece una compra, venta o permuta, pero falta la contraprestación.", field: "contrapartida", hint: "Selecciona el activo recibido/entregado o introduce su valor." });
+    issues.push({ code: "missing_counterparty", severity: "blocking", message: "Sé que aquí hay una compra/venta/permuta, pero no aparece qué se recibió o entregó a cambio.", field: "contrapartida", hint: "Indica el activo y el importe de la contrapartida o su valor en EUR." });
   }
   if (isTrade && next.price === null && next.quoteAmount === null) {
-    issues.push({ code: "missing_valuation", severity: "warning", message: "No existe un precio ni una contraprestación suficiente para valorar la operación.", field: "valoracion", hint: "Introduce el valor de transmisión/adquisición en EUR o el precio y divisa." });
+    issues.push({ code: "missing_valuation", severity: "warning", message: "No aparece un valor claro para esta operación.", field: "valoracion", hint: "Con el precio o el importe de la contrapartida puedo calcular el valor fiscal." });
+  }
+  if (isTrade && next.price !== null && next.price <= 0) {
+    issues.push({ code: "invalid_price", severity: "blocking", message: "El precio de la operación no parece válido.", field: "precio", hint: "Comprueba el precio unitario del extracto." });
   }
   if (isTrade && next.price !== null && !next.priceCurrency) {
-    issues.push({ code: "missing_price_currency", severity: "blocking", message: "Existe un precio, pero no se ha identificado su divisa.", field: "divisa", hint: "Selecciona la divisa del precio." });
+    issues.push({ code: "missing_price_currency", severity: "blocking", message: "Hay un precio, pero no sé en qué divisa está expresado.", field: "divisa", hint: "Indica EUR, USD, USDT u otra divisa." });
   }
-  if (next.feeAmount !== null && !next.feeAsset) {
-    issues.push({ code: "missing_fee_asset", severity: "warning", message: "Se ha detectado una comisión, pero no su activo.", field: "comision", hint: "Selecciona el activo usado para pagar la comisión." });
+  if (next.feeAmount !== null && next.feeAmount !== 0 && !next.feeAsset) {
+    issues.push({ code: "missing_fee_asset", severity: "warning", message: "Hay una comisión, pero no aparece el activo con el que se pagó.", field: "comision", hint: "Indica el activo utilizado para pagar la comisión." });
   }
-  if (pair.inferred) issues.push({ code: "pair_inferred", severity: "info", message: "El par de mercado se ha interpretado automáticamente.", field: "par" });
-  if (isCashProxy(next.baseAsset)) issues.push({ code: "cash_like", severity: "info", message: "El activo se trata como saldo fiat/cash-like y no genera lotes de cripto.", field: "activo" });
-  if (next.classification === "needs_review" && issues.length === 0) issues.push({ code: "generic_review", severity: "warning", message: "El movimiento necesita una comprobación manual antes de incluirlo en el resultado fiscal.", hint: "Revisa el movimiento y confirma el tipo y los importes." });
+  if (next.feeAmount !== null && Math.abs(next.feeAmount) > 0 && !fee) {
+    issues.push({ code: "fee_not_usable", severity: "warning", message: "La comisión no se puede llevar al cálculo porque falta su activo.", field: "comision" });
+  }
+
+  // These checks are deliberately silent when everything is consistent. We only
+  // flag situations a tax professional would normally stop and verify.
+  if (isTrade && next.baseAmount !== null && next.quoteAmount !== null && next.price !== null && next.price > 0) {
+    const expected = Math.abs(next.baseAmount) * Math.abs(next.price);
+    const actual = Math.abs(next.quoteAmount);
+    if (expected > 0 && actual > 0) {
+      const deviation = Math.abs(actual - expected) / expected;
+      if (deviation > 0.08) {
+        issues.push({ code: "amount_price_mismatch", severity: "warning", message: "El importe y el precio no cuadran del todo.", field: "valoracion", hint: "Puede ser spread, comisión o un formato distinto del exchange. Conviene comprobarlo antes de cerrar el ejercicio." });
+      }
+    }
+  }
+
+  if (isTrade && next.feeAmount !== null && next.quoteAmount !== null && Math.abs(next.quoteAmount) > 0) {
+    const feeRatio = Math.abs(next.feeAmount) / Math.abs(next.quoteAmount);
+    if (feeRatio > 0.10) {
+      issues.push({ code: "unusually_high_fee", severity: "warning", message: "La comisión es bastante alta respecto al importe de la operación.", field: "comision", hint: "Comprueba que el CSV no mezcle comisión, spread e importe total." });
+    }
+  }
+
+  // Informational traces are kept out of the user-facing incident list. They are
+  // useful for audit/debugging without making the product feel noisy or robotic.
+  if (pair.inferred) issues.push({ code: "pair_inferred", severity: "info", message: `Par interpretado automáticamente (${pair.base}/${pair.quote}).`, field: "par" });
+  if (isCashProxy(next.baseAsset)) issues.push({ code: "cash_like", severity: "info", message: "Saldo fiat o equivalente de efectivo.", field: "activo" });
   return issues;
 }
 
@@ -138,17 +170,12 @@ export function canonicalizeNormalizedMovement(movement: NormalizedMovement, exc
   next.transactionType = type;
   next.originalType = movement.originalType || type;
 
-  if (/transfer\s*\(?stake\)?/i.test(movement.originalType) || /stake\s+transfer/i.test(normalizedText(movement.originalType))) next.transactionType = "transfer_in";
-  if (/transfer\s*\(?unstake\)?/i.test(movement.originalType) || /unstake\s+transfer/i.test(normalizedText(movement.originalType))) next.transactionType = "transfer_out";
-
-  // When the provider exposes a pair and a side, trust the economic structure
-  // over a proprietary operation label.
-  const side = normalizedText(raw(movement, ["Side", "Trade Side"]));
+  const side = normalizedText(raw(movement, ["Side", "Trade Side", "Order Side"]));
   if (pair.base && /^(buy|sell)$/.test(side) && next.baseAmount !== null) {
     next.transactionType = side;
     next.baseAsset = next.baseAsset || pair.base;
     next.quoteAsset = next.quoteAsset || pair.quote || null;
-    if (next.quoteAmount === null && next.price !== null && next.baseAmount !== null) {
+    if (next.quoteAmount === null && next.price !== null && next.baseAmount !== null && next.price > 0) {
       const derivedQuote = Math.abs(next.baseAmount) * Math.abs(next.price);
       if (Number.isFinite(derivedQuote) && derivedQuote > 0) next.quoteAmount = side === "buy" ? -derivedQuote : derivedQuote;
     }
@@ -165,10 +192,10 @@ export function canonicalizeNormalizedMovement(movement: NormalizedMovement, exc
   }
 
   const issues = movementIssues(next, String(movement.originalType || ""), next.transactionType, pair);
-  const hasBlocking = issues.some((issue) => issue.severity === "blocking");
-  const onlyInfo = issues.length > 0 && !issues.some((issue) => issue.severity !== "info");
+  const blocking = issues.some((issue) => issue.severity === "blocking");
+  const review = issues.some((issue) => issue.severity === "warning");
 
-  next.classification = hasBlocking || next.transactionType === "other" || (!next.baseAsset && !next.quoteAsset)
+  next.classification = blocking || next.transactionType === "other" || (!next.baseAsset && !next.quoteAsset)
     ? "needs_review"
     : next.classification;
 
@@ -179,8 +206,8 @@ export function canonicalizeNormalizedMovement(movement: NormalizedMovement, exc
   rawData.canonical_pair_quote = pair.quote || null;
   rawData.canonical_fee_asset = currentFee || normalizeAsset(next.feeAsset) || null;
   rawData.review_issues = issues;
-  rawData.review_status = hasBlocking ? "blocking" : issues.length ? (onlyInfo ? "verified_with_inference" : "review") : "clean";
-  rawData.review_confidence = hasBlocking ? "low" : issues.length ? "medium" : "high";
+  rawData.review_status = blocking ? "blocking" : review ? "review" : "clean";
+  rawData.review_confidence = blocking ? "low" : review ? "medium" : "high";
   rawData.review_hint = issues.find((issue) => issue.hint)?.hint || null;
   next.raw = rawData;
 
