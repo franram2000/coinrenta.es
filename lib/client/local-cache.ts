@@ -37,6 +37,7 @@ type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
 const DB_VERSION = 4;
 const STORE = 'datasets';
+const CACHE_SCHEMA_VERSION = 6;
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -57,7 +58,9 @@ export async function getLocalDataset(userId: string, connectionId: string): Pro
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
     request.onsuccess = () => {
       const value = request.result as StoredRecord | undefined;
-      if (!value || value.version !== 5 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
+      // Cache schema 6 also encodes the fiscal engine generation in the server
+      // sourceVersion. This prevents stale derived data surviving parser changes.
+      if (!value || value.version !== CACHE_SCHEMA_VERSION || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
       resolve({ ...value });
     };
     request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
@@ -134,7 +137,7 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
     rawRow: movement.raw?.row || null,
   }));
   const dataset: LocalDataset = {
-    version: 5,
+    version: CACHE_SCHEMA_VERSION,
     userId,
     connectionId: payload.connectionId,
     sourceVersion: payload.sourceVersion || sourceVersion,
