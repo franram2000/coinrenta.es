@@ -20,6 +20,7 @@ export type LocalMovement = {
   accountId: string | null;
   sourceFile: string | null;
   exchange: string;
+  rawRow?: Record<string, string> | null;
 };
 
 export type LocalDataset = {
@@ -34,7 +35,7 @@ export type LocalDataset = {
 
 type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE = 'datasets';
 
 function openDb(): Promise<IDBDatabase> {
@@ -56,11 +57,7 @@ export async function getLocalDataset(userId: string, connectionId: string): Pro
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
     request.onsuccess = () => {
       const value = request.result as StoredRecord | undefined;
-      // Version 4 deliberately invalidates every previous client cache so the fiscal
-      // engine is rebuilt from the current server-side CSV source. This is important
-      // after changes to normalization/canonicalization: an old cache can contain
-      // movements in a shape that no longer matches the current FIFO rules.
-      if (!value || value.version !== 4 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
+      if (!value || value.version !== 5 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
       resolve({ ...value });
     };
     request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
@@ -134,9 +131,10 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
     sourceFile: movement.sourceFile || movement.raw?.sourceFile || null,
     exchange: movement.exchange || movement.raw?.sourceExchange || payload.exchange,
     accountId: movement.accountId || null,
+    rawRow: movement.raw?.row || null,
   }));
   const dataset: LocalDataset = {
-    version: 4,
+    version: 5,
     userId,
     connectionId: payload.connectionId,
     sourceVersion: payload.sourceVersion || sourceVersion,
@@ -155,6 +153,11 @@ export function datasetToFifo(dataset: LocalDataset): { txs: FifoTx[]; assets: M
       if (value) symbols.add(value.toUpperCase());
     }
     if (movement.priceCurrency) symbols.add(movement.priceCurrency.toUpperCase());
+    if (movement.rawRow) {
+      for (const value of [movement.rawRow.Fiat, movement.rawRow.Currency, movement.rawRow['Asset market price currency'], movement.rawRow['Spread Currency']]) {
+        if (value) symbols.add(value.toUpperCase());
+      }
+    }
   }
 
   const assets = new Map<string, FifoAsset>();
@@ -183,6 +186,7 @@ export function datasetToFifo(dataset: LocalDataset): { txs: FifoTx[]; assets: M
       classification: movement.classification,
       sourceFile: movement.sourceFile,
       sourceExchange: movement.exchange,
+      row: movement.rawRow || undefined,
     },
   }));
   return { txs, assets };
