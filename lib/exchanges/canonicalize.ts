@@ -7,6 +7,7 @@ const FIAT = new Set([
 
 const CRYPTO_QUOTES = new Set(["USDT", "USDC", "FDUSD", "BUSD", "TUSD", "DAI", "BTC", "ETH", "BNB"]);
 
+type CanonicalRaw = NormalizedMovement["raw"] & Record<string, unknown>;
 const normalizeAsset = (value: unknown) => String(value ?? "").trim().toUpperCase().replace(/[\s_-]+/g, "");
 const normalizeType = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, "_");
 
@@ -74,29 +75,23 @@ export function canonicalizeNormalizedMovement(movement: NormalizedMovement, exc
   const type = inferType(movement);
   const pair = pairFromRaw(movement);
   const currentBase = normalizeAsset(next.baseAsset);
-  const currentQuote = normalizeAsset(next.quoteAsset);
   const currentFee = normalizeAsset(next.feeAsset);
 
   next.transactionType = type;
   next.originalType = movement.originalType || type;
 
-  // Explicitly preserve Bitpanda staking custody movements as transfers.
   if (/transfer\s*\(stake\)/i.test(movement.originalType) || /transfer\s*\(unstake\)/i.test(movement.originalType)) {
     const direction = raw(movement, ["In/Out", "Direction", "Flow"]).toLowerCase();
-    next.transactionType = /unstake|out|debit/.test(movement.originalType.toLowerCase() + " " + direction) ? "transfer_out" : "transfer_in";
+    next.transactionType = /unstake|out|debit/.test(`${movement.originalType} ${direction}`.toLowerCase()) ? "transfer_out" : "transfer_in";
   }
 
-  // Generic ledger exports often carry pair/base/quote columns. Prefer explicit legs over guessing from a single currency column.
-  if ((!next.baseAsset || next.baseAmount === null) && pair.base) {
-    next.baseAsset = pair.base;
-  }
-  if (!next.quoteAsset && pair.quote && CRYPTO_QUOTES.has(pair.quote)) {
-    next.quoteAsset = pair.quote;
-  }
+  if ((!next.baseAsset || next.baseAmount === null) && pair.base) next.baseAsset = pair.base;
+  if (!next.quoteAsset && pair.quote && CRYPTO_QUOTES.has(pair.quote)) next.quoteAsset = pair.quote;
 
-  // Cash Plus is a cash-like consideration in Bitpanda exports, even though the Asset column is not fiat.
+  const rawData = next.raw as CanonicalRaw;
   if (exchange.toLowerCase() === "bitpanda" && (currentBase === "BCPEUR" || currentBase === "BCPUSD")) {
-    next.raw = { ...next.raw, cash_like: true, cash_currency: currentBase === "BCPEUR" ? "EUR" : "USD" };
+    rawData.cash_like = true;
+    rawData.cash_currency = currentBase === "BCPEUR" ? "EUR" : "USD";
   }
 
   const classificationNeedsReview =
@@ -105,18 +100,16 @@ export function canonicalizeNormalizedMovement(movement: NormalizedMovement, exc
     (!next.baseAsset && !next.quoteAsset) ||
     (next.baseAmount === null && next.quoteAmount === null && next.feeAmount === null);
 
-  const cashAsset = next.baseAsset && isCashProxy(next.baseAsset);
+  const cashAsset = Boolean(next.baseAsset && isCashProxy(next.baseAsset));
   next.classification = classificationNeedsReview ? "needs_review" : movement.classification;
 
-  next.raw = {
-    ...next.raw,
-    canonical_exchange: exchange.toLowerCase(),
-    canonical_type: next.transactionType,
-    canonical_cash_asset: Boolean(cashAsset),
-    canonical_pair_base: pair.base || null,
-    canonical_pair_quote: pair.quote || null,
-    canonical_fee_asset: currentFee || null,
-  };
+  rawData.canonical_exchange = exchange.toLowerCase();
+  rawData.canonical_type = next.transactionType;
+  rawData.canonical_cash_asset = cashAsset;
+  rawData.canonical_pair_base = pair.base || null;
+  rawData.canonical_pair_quote = pair.quote || null;
+  rawData.canonical_fee_asset = currentFee || null;
+  next.raw = rawData;
 
   return next;
 }
