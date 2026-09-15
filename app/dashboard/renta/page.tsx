@@ -3,59 +3,171 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import QualityControl from "./quality-control";
+import { calculateFifo, type FifoAsset, type FifoTx } from "@/lib/tax/fifo";
 
-export const metadata:Metadata={title:"Renta",description:"Preparación fiscal de criptoactivos.",robots:{index:false,follow:false}};
-export const dynamic="force-dynamic";
+export const metadata: Metadata = { title: "Renta", description: "Preparación fiscal de criptoactivos.", robots: { index: false, follow: false } };
+export const dynamic = "force-dynamic";
 
-type Tx={id:string;occurred_at:string;transaction_type:string;base_asset_id:string|null;base_amount:number|string|null;quote_asset_id:string|null;quote_amount:number|string|null;fee_asset_id:string|null;fee_amount:number|string|null;price:number|string|null;price_currency:string|null;account_id:string};
-type Asset={id:string;symbol:string;name:string;asset_type:string|null};
-type Snapshot={id:string;captured_at:string;account_id:string;asset_id:string;quantity:number|string|null;value_eur:number|string|null};
-type Account={id:string;connection_id:string|null;name:string};
-type Connection={id:string;exchange_id:string};
-type Exchange={id:string;code:string};
-type Lot={qty:number;cost:number|null};
-type Sale={id:string;occurredAt:string;symbol:string;name:string;quantity:number;proceeds:number|null;missingQuantity:number;reason:string};
-type Report={gain:number;gainKnown:boolean;unknownBasis:number;proceeds:number;costBasis:number;disposals:number;incomeEur:number;incomeKnown:number;feesEur:number;cryptoFeeEvents:number;unsupported:number;qualitySales:Sale[];positions:{symbol:string;name:string;quantity:number;valueEur:number|null;foreign:boolean}[];foreignValueEur:number};
+type Snapshot = { id: string; captured_at: string; account_id: string; asset_id: string; quantity: number | string | null; value_eur: number | string | null };
+type Account = { id: string; connection_id: string | null; name: string };
+type Connection = { id: string; exchange_id: string };
+type Exchange = { id: string; code: string };
 
-const FIAT=new Set(["EUR","USD","GBP","CHF","PLN","SEK","DKK","NOK"]);
-const INCOME=new Set(["reward","interest","dividend","airdrop","cashback","staking"]);
-const TRANSFERS=new Set(["deposit","withdrawal","transfer_in","transfer_out","transfer"]);
-const SALES=new Set(["sell","swap","trade","convert"]);
-const money=(v:number|null|undefined)=>v==null||!Number.isFinite(v)?"—":v.toLocaleString("es-ES",{style:"currency",currency:"EUR",maximumFractionDigits:2});
-const date=(v:string|null|undefined)=>v?new Intl.DateTimeFormat("es-ES",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v)):"—";
-const endOf=(y:number)=>`${y+1}-01-01T00:00:00.000Z`;
+const money = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+const number = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? "—" : v.toLocaleString("es-ES", { maximumFractionDigits: 8 });
+const date = (v: string | null | undefined) => v ? new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v)) : "—";
+const endOf = (year: number) => `${year + 1}-01-01T00:00:00.000Z`;
 
-async function loadTransactions(db:Awaited<ReturnType<typeof createClient>>,userId:string,end:string){const out:Tx[]=[];for(let from=0;;from+=1000){const {data,error}=await db.from("transactions").select("id,occurred_at,transaction_type,base_asset_id,base_amount,quote_asset_id,quote_amount,fee_asset_id,fee_amount,price,price_currency,account_id").eq("user_id",userId).lt("occurred_at",end).order("occurred_at",{ascending:true}).range(from,from+999);if(error)throw new Error(error.message);const page=(data||[]) as Tx[];out.push(...page);if(page.length<1000)return out;}}
-
-function calculate(txs:Tx[],year:number,assets:Map<string,Asset>,accounts:Map<string,Account>,connections:Map<string,Connection>,exchanges:Map<string,Exchange>,snapshots:Snapshot[]):Report{
- const lots=new Map<string,Lot[]>();const sales:Sale[]=[];const pending=new Map<string,{cost:number;at:number}>();let gain=0,proceeds=0,costBasis=0,unknownBasis=0,disposals=0,incomeEur=0,incomeKnown=0,feesEur=0,cryptoFeeEvents=0,unsupported=0,gainKnown=true;
- const asset=(id:string|null)=>id?assets.get(id)||null:null;const add=(id:string,q:number,c:number|null)=>{if(q<=0)return;const list=lots.get(id)||[];list.push({qty:q,cost:c});lots.set(id,list);};
- const take=(id:string,q:number)=>{let rem=q,cost=0,known=true;const list=lots.get(id)||[];while(rem>1e-12&&list.length){const lot=list[0],n=Math.min(rem,lot.qty);if(lot.cost==null)known=false;else cost+=lot.cost*(n/lot.qty);lot.qty-=n;rem-=n;if(lot.qty<=1e-12)list.shift();}lots.set(id,list);return{remaining:rem,cost,known};};
- for(const tx of [...txs].sort((a,b)=>new Date(a.occurred_at).getTime()-new Date(b.occurred_at).getTime())){
-  const type=String(tx.transaction_type||"").toLowerCase(),base=asset(tx.base_asset_id),quote=asset(tx.quote_asset_id),fee=asset(tx.fee_asset_id),bq=Math.abs(Number(tx.base_amount||0)),qv=Math.abs(Number(tx.quote_amount||0)),fq=Math.abs(Number(tx.fee_amount||0)),inYear=new Date(tx.occurred_at).getUTCFullYear()===year;
-  const eur=!!quote&&quote.symbol.toUpperCase()==="EUR"||String(tx.price_currency||"").toUpperCase()==="EUR";const fiat=!!quote&&(quote.asset_type==="fiat"||FIAT.has(quote.symbol.toUpperCase()));
-  if(fq>0&&inYear){if(fee&&!FIAT.has(fee.symbol.toUpperCase())&&fee.asset_type!=="fiat")cryptoFeeEvents++;else feesEur+=fq;}
-  if(type==="buy"&&base&&bq){add(base.id,bq,qv>0&&fiat&&eur?qv:null);continue;}
-  if(INCOME.has(type)&&base&&bq){const value=qv>0&&eur?qv:Number(tx.price)>0&&String(tx.price_currency||"").toUpperCase()==="EUR"?bq*Number(tx.price):null;if(inYear&&value!=null){incomeEur+=value;incomeKnown++;}add(base.id,bq,value);continue;}
-  if(TRANSFERS.has(type)){if((type==="transfer_out"||type==="withdrawal")&&base&&bq){const r=take(base.id,bq);if(r.remaining<=1e-12)pending.set(`${base.id}:${bq.toFixed(12)}`,{cost:r.cost,at:new Date(tx.occurred_at).getTime()});}else if((type==="transfer_in"||type==="deposit"||type==="transfer")&&base&&bq){const key=`${base.id}:${bq.toFixed(12)}`,p=pending.get(key);if(p&&Math.abs(new Date(tx.occurred_at).getTime()-p.at)<=7*86400000){add(base.id,bq,p.cost);pending.delete(key);}else add(base.id,bq,null);}continue;}
-  if(type==="fee"){if(fee&&fq)take(fee.id,fq);continue;}
-  if(type==="expense")continue;
-  if(SALES.has(type)&&base&&bq){const r=take(base.id,bq);if(!fiat&&!eur){if(inYear)unsupported++;continue;}if(inYear){disposals++;const net=qv-((fee&&FIAT.has(fee.symbol.toUpperCase()))?fq:0);if(qv&&eur){proceeds+=net;if(r.known){costBasis+=r.cost;gain+=net-r.cost;}else{gainKnown=false;unknownBasis++;sales.push({id:tx.id,occurredAt:tx.occurred_at,symbol:base.symbol,name:base.name,quantity:bq,proceeds:net,missingQuantity:r.remaining>1e-12?r.remaining:bq,reason:r.remaining>1e-12?"No hay adquisición suficiente en los datos importados.":"El lote FIFO contiene un coste no demostrable."});}}else{gainKnown=false;unknownBasis++;sales.push({id:tx.id,occurredAt:tx.occurred_at,symbol:base.symbol,name:base.name,quantity:bq,proceeds:null,missingQuantity:bq,reason:"La contraprestación no está suficientemente identificada."});}}continue;}
-  if(base&&bq&&type!=="unknown"&&inYear)unsupported++;
- }
- const positions=[...lots.entries()].map(([id,list])=>{const a=assets.get(id);if(!a)return null;const q=list.reduce((s,l)=>s+Math.max(0,l.qty),0);if(q<=1e-12)return null;const value=snapshots.filter(s=>s.asset_id===id).reduce((sum,s)=>sum+(s.value_eur==null?0:Number(s.value_eur)),0);return{symbol:a.symbol,name:a.name,quantity:q,valueEur:value||null,foreign:false};}).filter(Boolean) as Report["positions"];
- let foreignValueEur=0;for(const s of snapshots){if(s.value_eur==null)continue;const account=accounts.get(s.account_id);const connection=account?.connection_id?connections.get(account.connection_id):null;const exchange=connection?exchanges.get(connection.exchange_id):null;if(exchange?.code.toLowerCase()==="bitpanda")foreignValueEur+=Number(s.value_eur);}
- return{gain,gainKnown,unknownBasis,proceeds,costBasis,disposals,incomeEur,incomeKnown,feesEur,cryptoFeeEvents,unsupported,qualitySales:sales,positions,foreignValueEur};
+async function loadTransactions(db: Awaited<ReturnType<typeof createClient>>, userId: string, end: string) {
+  const out: FifoTx[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db.from("transactions")
+      .select("id,occurred_at,transaction_type,base_asset_id,base_amount,quote_asset_id,quote_amount,fee_asset_id,fee_amount,price,price_currency,account_id,raw_data")
+      .eq("user_id", userId).lt("occurred_at", end).order("occurred_at", { ascending: true }).range(from, from + 999);
+    if (error) throw new Error(error.message);
+    const page = (data || []) as FifoTx[];
+    out.push(...page);
+    if (page.length < 1000) return out;
+  }
 }
 
-export default async function RentaPage({searchParams}:{searchParams:Promise<{year?:string}>}){
- const db=await createClient();const {data:{user}}=await db.auth.getUser();if(!user)redirect("/login");const p=await searchParams;const requested=Number(p.year);const year=Number.isInteger(requested)&&requested>=2020&&requested<=2030?requested:2025;const end=endOf(year);
- const [profileResult,txs,snapResult,latestResult,assetsResult,accountsResult,connectionsResult,exchangesResult,taxResult]=await Promise.all([db.from("profiles").select("role").eq("id",user.id).maybeSingle(),loadTransactions(db,user.id,end),db.from("balance_snapshots").select("id,captured_at,account_id,asset_id,quantity,value_eur").eq("user_id",user.id).lt("captured_at",end).order("captured_at",{ascending:true}).limit(20000),db.from("balance_snapshots").select("captured_at,source").eq("user_id",user.id).order("captured_at",{ascending:false}).limit(1).maybeSingle(),db.from("assets").select("id,symbol,name,asset_type"),db.from("accounts").select("id,connection_id,name").eq("user_id",user.id),db.from("exchange_connections").select("id,exchange_id").eq("user_id",user.id),db.from("exchanges").select("id,code").eq("is_active",true),db.from("tax_years").select("year,updated_at").eq("user_id",user.id).order("year",{ascending:false})]);
- const error=profileResult.error||snapResult.error||latestResult.error||assetsResult.error||accountsResult.error||connectionsResult.error||exchangesResult.error;if(error)throw new Error(error.message);
- const isPro=profileResult.data?.role==="pro"||profileResult.data?.role==="admin";
- const snapshots=(snapResult.data||[]) as Snapshot[],assets=new Map<string,Asset>((assetsResult.data||[]).map((x:Asset)=>[x.id,x])),accounts=new Map<string,Account>((accountsResult.data||[]).map((x:Account)=>[x.id,x])),connections=new Map<string,Connection>((connectionsResult.data||[]).map((x:Connection)=>[x.id,x])),exchanges=new Map<string,Exchange>((exchangesResult.data||[]).map((x:Exchange)=>[x.id,x])),report=calculate(txs,year,assets,accounts,connections,exchanges,snapshots);
- const valuation=latestResult.data?.captured_at||null;const yearEnd=snapshots.some(s=>{const d=new Date(s.captured_at);return d.getUTCFullYear()===year&&d.getUTCMonth()===11&&d.getUTCDate()===31&&s.value_eur!=null;});const foreign=[...connections.values()].filter(c=>exchanges.get(c.exchange_id)?.code.toLowerCase()==="bitpanda");const partial=!report.gainKnown;
- const issues=[report.unknownBasis?{code:"missing-basis",title:`${report.unknownBasis} ventas con coste no demostrable`,description:"El coste FIFO de estas ventas no puede justificarse completamente con los datos importados.",sales:report.qualitySales}:null,report.unsupported?{code:"unsupported",title:`${report.unsupported} operaciones requieren clasificación`,description:"Hay movimientos que el sistema conserva pero necesita clasificar mejor.",actionLabel:"Revisar movimientos",actionHref:"/dashboard/movimientos"}:null,report.cryptoFeeEvents?{code:"crypto-fees",title:`${report.cryptoFeeEvents} comisiones en cripto`,description:"Se mantienen identificadas para su tratamiento como posible disposición.",actionLabel:"Revisar movimientos",actionHref:"/dashboard/movimientos"}:null,!yearEnd?{code:"info",title:"No hay valoración exacta a 31/12",description:"La valoración patrimonial del ejercicio no se considera definitiva sin cierre de valoración."}:null,foreign.length?{code:"info-foreign",title:"Se ha detectado custodia extranjera",description:"Comprueba la entidad contractual del custodio antes de determinar obligaciones informativas."}:null].filter(Boolean) as any[];
- const actions=issues.filter(x=>x.code!=="info"&&x.code!=="info-foreign");const taxYear=(taxResult.data||[]).find((x:any)=>x.year===year);
- return <main className="dashboard-content renta-page"><header className="app-topbar"><div><span className="topbar-kicker">CoinRenta</span><h1>Renta</h1><p>Preparación de datos para IRPF, Patrimonio, Modelo 721 y trazabilidad DAC8/CARF.</p></div></header><section className="renta-hero panel-card"><div><span className="section-kicker">EJERCICIO FISCAL</span><h2>Informe fiscal {year}</h2><p>Fecha de valoración: <strong>{date(valuation)}</strong></p></div><nav className="renta-year-switcher" aria-label="Ejercicio fiscal"><Link href="/dashboard/renta" className={year===2025?"selected":""}>2025</Link><Link href="/dashboard/renta?year=2024" className={year===2024?"selected":""}>2024</Link><Link href="/dashboard/renta?year=2023" className={year===2023?"selected":""}>2023</Link><Link href="/dashboard/renta?year=2022" className={year===2022?"selected":""}>2022</Link></nav></section><section className="renta-stat-grid"><article className="stat-card"><span className="stat-label">Ganancia / pérdida cripto</span>{isPro?<><strong className={partial?"renta-number-warning":""}>{money(report.gain)}</strong><span className="stat-note">{partial?"Cálculo parcial: se excluyen operaciones pendientes de revisión.":"Cálculo con lotes disponibles."}</span>{partial&&<small className="renta-warning-inline">Resultado provisional y meramente informativo; no vinculante.</small>}</>:<><strong className="renta-pro-locked-value">Pro</strong><span className="stat-note">Resultado disponible exclusivamente para usuarios Pro.</span></>}</article><article className="stat-card"><span className="stat-label">Valor de transmisión</span><strong>{money(report.proceeds)}</strong></article><article className="stat-card"><span className="stat-label">Coste de adquisición</span><strong>{money(report.costBasis)}</strong></article><article className="stat-card"><span className="stat-label">Acciones pendientes</span><strong>{actions.length}</strong></article></section><section className="renta-section panel-card"><div className="panel-head"><h3>Ganancias y pérdidas patrimoniales</h3><span className="renta-badge">Renta del ahorro</span></div><div className="renta-summary-grid"><div><small>Transmisiones / permutas</small><strong>{report.disposals}</strong></div><div><small>Ganancia calculada</small>{isPro?<strong className={partial?"renta-number-warning":""}>{money(report.gain)}</strong>:<strong className="renta-pro-locked-value">Pro</strong>}</div><div><small>Ingresos identificados</small><strong>{report.incomeKnown?money(report.incomeEur):"Parcial"}</strong></div><div><small>Comisiones fiat</small><strong>{money(report.feesEur)}</strong></div></div>{partial&&isPro&&<div className="renta-provisional"><strong>Resultado provisional</strong><span>Se excluyen las operaciones pendientes de revisión. El importe mostrado es orientativo y no vinculante.</span></div>}{!isPro&&<div className="renta-pro-locked"><strong>La ganancia calculada es una función Pro</strong><span>El plan Free permite consultar los datos de movimientos y las incidencias detectadas, pero no muestra el resultado fiscal calculado.</span><Link className="quality-action primary" href="/dashboard/configuracion">Ver Pro</Link></div>}</section><section className="renta-section panel-card"><div className="panel-head"><h3>Inventario patrimonial · 31 de diciembre</h3><span className={`renta-badge ${yearEnd?"positive":"warning"}`}>{yearEnd?"Valoración disponible":"Valoración pendiente"}</span></div><div className="renta-summary-grid three"><div><small>Activos con saldo</small><strong>{report.positions.length}</strong></div><div><small>Valor conocido 31/12</small><strong>{money(report.positions.reduce((s,x)=>s+(x.valueEur||0),0))}</strong></div><div><small>Fecha de valoración</small><strong>{date(valuation)}</strong></div></div></section><section className="renta-section panel-card"><div className="panel-head"><h3>Control de calidad</h3><span className={`renta-badge ${actions.length?"warning":"positive"}`}>{actions.length?`${actions.length} acciones pendientes`:"Sin acciones pendientes"}</span></div><QualityControl issues={issues}/><div className="renta-data-foot"><span>Movimientos del ejercicio: <strong>{txs.filter(x=>new Date(x.occurred_at).getUTCFullYear()===year).length}</strong></span><span>Históricos analizados: <strong>{txs.length}</strong></span><span>Última actualización: <strong>{taxYear?.updated_at?date(taxYear.updated_at):"No registrada"}</strong></span></div></section><section className="renta-disclaimer"><strong>Aviso importante sobre el carácter exclusivamente informativo</strong><p>Los datos, cálculos, estimaciones y resultados proporcionados por CoinRenta tienen carácter exclusivamente informativo y orientativo. CoinRenta no presta servicios de asesoramiento fiscal, contable ni jurídico y no sustituye la revisión de la documentación original ni el asesoramiento de un profesional cualificado. La información importada puede contener errores, omisiones o datos incompletos y los cálculos pueden no contemplar todas las circunstancias particulares del contribuyente. El usuario debe verificar la información y sus obligaciones tributarias antes de utilizar cualquier resultado en una declaración. CoinRenta no garantiza que los resultados sean exactos, completos o adecuados para una situación fiscal concreta y no asume responsabilidad por decisiones, declaraciones, liquidaciones, sanciones, recargos, intereses o cualquier otro perjuicio derivado del uso de la información proporcionada por la aplicación.</p></section></main>;
+export default async function RentaPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
+  if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const requested = Number(params.year);
+  const year = Number.isInteger(requested) && requested >= 2020 && requested <= 2030 ? requested : 2025;
+  const end = endOf(year);
+
+  const [profileResult, txs, snapshotsResult, latestResult, assetsResult, accountsResult, connectionsResult, exchangesResult] = await Promise.all([
+    db.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    loadTransactions(db, user.id, end),
+    db.from("balance_snapshots").select("id,captured_at,account_id,asset_id,quantity,value_eur").eq("user_id", user.id).lt("captured_at", end).order("captured_at", { ascending: true }).limit(20000),
+    db.from("balance_snapshots").select("captured_at,source").eq("user_id", user.id).order("captured_at", { ascending: false }).limit(1).maybeSingle(),
+    db.from("assets").select("id,symbol,name,asset_type"),
+    db.from("accounts").select("id,connection_id,name").eq("user_id", user.id),
+    db.from("exchange_connections").select("id,exchange_id").eq("user_id", user.id),
+    db.from("exchanges").select("id,code").eq("is_active", true),
+  ]);
+
+  const error = profileResult.error || snapshotsResult.error || latestResult.error || assetsResult.error || accountsResult.error || connectionsResult.error || exchangesResult.error;
+  if (error) throw new Error(error.message);
+
+  const assets = new Map<string, FifoAsset>((assetsResult.data || []).map((asset: FifoAsset) => [asset.id, asset]));
+  const snapshots = (snapshotsResult.data || []) as Snapshot[];
+  const accounts = new Map<string, Account>((accountsResult.data || []).map((account: Account) => [account.id, account]));
+  const connections = new Map<string, Connection>((connectionsResult.data || []).map((connection: Connection) => [connection.id, connection]));
+  const exchanges = new Map<string, Exchange>((exchangesResult.data || []).map((exchange: Exchange) => [exchange.id, exchange]));
+  const report = await calculateFifo(txs, year, assets);
+  const isPro = profileResult.data?.role === "pro" || profileResult.data?.role === "admin";
+  const valuation = latestResult.data?.captured_at || null;
+
+  const yearEnd = snapshots.some((row) => {
+    const d = new Date(row.captured_at);
+    return d.getUTCFullYear() === year && d.getUTCMonth() === 11 && d.getUTCDate() === 31 && row.value_eur != null;
+  });
+
+  const foreignValueEur = snapshots.reduce((sum, row) => {
+    if (row.value_eur == null) return sum;
+    const account = accounts.get(row.account_id);
+    const connection = account?.connection_id ? connections.get(account.connection_id) : null;
+    const exchange = connection ? exchanges.get(connection.exchange_id) : null;
+    return exchange?.code?.toLowerCase() === "bitpanda" ? sum + Number(row.value_eur) : sum;
+  }, 0);
+
+  const issues = [
+    report.unknownBasis ? {
+      code: "missing-basis",
+      title: `${report.unknownBasis} ventas con coste FIFO incompleto`,
+      description: "El cálculo ha encontrado ventas en las que falta cantidad o coste de adquisición demostrable. Las ventas con un lote FIFO completo ya no se marcan como incidencia.",
+      sales: report.qualitySales,
+    } : null,
+    report.unsupported ? {
+      code: "unsupported",
+      title: `${report.unsupported} operaciones requieren clasificación`,
+      description: "CoinRenta conserva estos movimientos, pero todavía no puede incorporarlos de forma segura al cálculo fiscal.",
+      actionLabel: "Revisar movimientos",
+      actionHref: "/dashboard/movimientos",
+    } : null,
+    report.cryptoFeeEvents ? {
+      code: "crypto-fees",
+      title: `${report.cryptoFeeEvents} comisiones pagadas en cripto`,
+      description: "La comisión queda identificada por separado para evitar incorporarla erróneamente al precio de la contraprestación.",
+      actionLabel: "Revisar movimientos",
+      actionHref: "/dashboard/movimientos",
+    } : null,
+    !yearEnd ? {
+      code: "info-year-end",
+      title: "No hay valoración exacta a 31/12",
+      description: "La valoración patrimonial del ejercicio no se considera definitiva sin una valoración de cierre.",
+    } : null,
+    foreignValueEur > 0 ? {
+      code: "info-foreign",
+      title: "Se ha detectado custodia extranjera",
+      description: "Comprueba la entidad contractual del custodio antes de determinar las obligaciones informativas correspondientes.",
+    } : null,
+  ].filter(Boolean) as any[];
+
+  const actionable = issues.filter((issue) => !issue.code.startsWith("info"));
+
+  return <main className="dashboard-content renta-page">
+    <header className="app-topbar">
+      <div><span className="topbar-kicker">CoinRenta</span><h1>Renta</h1><p>Preparación de datos para IRPF, Patrimonio, Modelo 721 y trazabilidad DAC8/CARF.</p></div>
+    </header>
+
+    <section className="renta-hero panel-card">
+      <div><span className="section-kicker">EJERCICIO FISCAL</span><h2>Informe fiscal {year}</h2><p>Última valoración disponible: <strong>{date(valuation)}</strong></p></div>
+      <nav className="renta-year-switcher" aria-label="Ejercicio fiscal">
+        {[2025, 2024, 2023, 2022].map((item) => <Link key={item} href={item === 2025 ? "/dashboard/renta" : `/dashboard/renta?year=${item}`} className={year === item ? "selected" : ""}>{item}</Link>)}
+      </nav>
+    </section>
+
+    <section className="renta-stat-grid">
+      <article className="stat-card"><span className="stat-label">Ganancia / pérdida</span>{isPro ? <><strong className={!report.gainKnown ? "renta-number-warning" : ""}>{money(report.gain)}</strong><span className="stat-note">{report.gainKnown ? "FIFO completo con los datos disponibles." : "Resultado provisional por incidencias pendientes."}</span></> : <><strong className="renta-pro-locked-value">Pro</strong><span className="stat-note">Resultado fiscal detallado disponible en Pro.</span>}</article>
+      <article className="stat-card"><span className="stat-label">Valor de transmisión</span><strong>{money(report.proceeds)}</strong><span className="stat-note">Ventas y permutas computables</span></article>
+      <article className="stat-card"><span className="stat-label">Coste de adquisición</span><strong>{money(report.costBasis)}</strong><span className="stat-note">Lotes consumidos por FIFO</span></article>
+      <article className="stat-card"><span className="stat-label">Incidencias</span><strong>{actionable.length}</strong><span className="stat-note">Requieren revisión</span></article>
+    </section>
+
+    <section className="renta-section panel-card">
+      <div className="panel-head"><h3>Ganancias y pérdidas patrimoniales</h3><span className="renta-badge">Renta del ahorro</span></div>
+      <div className="renta-summary-grid">
+        <div><small>Transmisiones / permutas</small><strong>{report.disposals}</strong></div>
+        <div><small>Ganancia calculada</small>{isPro ? <strong className={!report.gainKnown ? "renta-number-warning" : ""}>{money(report.gain)}</strong> : <strong className="renta-pro-locked-value">Pro</strong>}</div>
+        <div><small>Ingresos identificados</small><strong>{report.incomeKnown ? money(report.incomeEur) : "Parcial"}</strong></div>
+        <div><small>Comisiones fiat</small><strong>{money(report.feesEur)}</strong></div>
+      </div>
+      {!report.gainKnown && <div className="renta-provisional"><strong>Resultado provisional</strong><span>Las operaciones con coste o valoración no demostrables quedan fuera del resultado definitivo hasta que se resuelvan.</span></div>}
+    </section>
+
+    <section className="renta-section panel-card">
+      <div className="panel-head"><div><span className="section-kicker">FIFO</span><h3>Cómo se está calculando</h3></div><span className="renta-badge">Método obligatorio</span></div>
+      <div className="renta-summary-grid">
+        <div><small>Regla</small><strong>Primero en entrar, primero en salir</strong></div>
+        <div><small>Moneda de cálculo</small><strong>EUR</strong></div>
+        <div><small>Divisas extranjeras</small><strong>Conversión histórica ECB</strong></div>
+        <div><small>Lotes sin coste</small><strong>{report.unknownBasis}</strong></div>
+      </div>
+      <div className="renta-explanation"><strong>Importante</strong><span>Un movimiento como «100,39785851 SILVER por -160 USD» sí tiene coste: CoinRenta convierte esos 160 USD a EUR con el tipo histórico del día de adquisición y guarda el coste en el lote FIFO. El signo negativo indica que el USD salió de la cuenta; no convierte el coste en negativo.</span></div>
+    </section>
+
+    <section className="renta-section panel-card">
+      <div className="panel-head"><div><span className="section-kicker">CONTROL DE CALIDAD</span><h3>Revisión fiscal</h3></div><span className="renta-badge">{actionable.length ? "Requiere revisión" : "Sin incidencias"}</span></div>
+      <QualityControl issues={issues} />
+    </section>
+
+    <section className="renta-section panel-card">
+      <div className="panel-head"><div><span className="section-kicker">MODELO 721</span><h3>Custodia extranjera</h3></div></div>
+      <div className="renta-summary-grid">
+        <div><small>Valor detectado</small><strong>{money(foreignValueEur)}</strong></div>
+        <div><small>Umbral de referencia</small><strong>{money(50000)}</strong></div>
+        <div><small>Estado</small><strong>{foreignValueEur >= 50000 ? "Superado" : "Por debajo"}</strong></div>
+        <div><small>Fuente</small><strong>Balances importados</strong></div>
+      </div>
+    </section>
+
+    <div className="renta-footer-note">Las referencias fiscales son orientativas y deben contrastarse con la documentación original y, cuando proceda, con un asesor fiscal.</div>
+  </main>;
 }
