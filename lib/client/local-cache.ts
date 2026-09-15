@@ -1,6 +1,7 @@
 'use client';
 
 import type { FifoAsset, FifoTx } from '@/lib/tax/fifo';
+import type { ReviewIssue } from '@/lib/exchanges/canonicalize';
 
 export type LocalMovement = {
   id: string; occurredAt: string; transactionType: string; originalType: string;
@@ -8,6 +9,10 @@ export type LocalMovement = {
   quoteAsset: string | null; quoteAmount: number | null; feeAsset: string | null; feeAmount: number | null;
   price: number | null; priceCurrency: string | null; classification: 'classified' | 'needs_review';
   accountId: string | null; sourceFile: string | null; exchange: string; rawRow?: Record<string, string> | null;
+  reviewIssues?: ReviewIssue[];
+  reviewStatus?: string | null;
+  reviewConfidence?: 'low' | 'medium' | 'high' | string | null;
+  reviewHint?: string | null;
 };
 
 export type LocalDataset = {
@@ -19,8 +24,8 @@ type StoredRecord = LocalDataset & { cacheKey: string };
 const DB_NAME = 'coinrenta-local';
 const DB_VERSION = 6;
 const STORE = 'datasets';
-const CACHE_SCHEMA_VERSION = 8;
-const FISCAL_REFRESH_VERSION = 'fifo8';
+const CACHE_SCHEMA_VERSION = 9;
+const FISCAL_REFRESH_VERSION = 'fifo9';
 
 if (typeof document !== 'undefined') {
   const styleId = 'coinrenta-hide-supabase-derived-label';
@@ -93,16 +98,23 @@ export async function fetchConnectionDataset(userId: string, connectionId: strin
   }
   const payload = await response.json() as {
     connectionId: string; exchange: string; sourceVersion: string; fetchedAt: string;
-    movements: Array<LocalMovement & { externalId?: string; raw?: { sourceFile?: string; sourceExchange?: string; row?: Record<string, string> } }>;
+    movements: Array<LocalMovement & { externalId?: string; raw?: { sourceFile?: string; sourceExchange?: string; row?: Record<string, string>; review_issues?: ReviewIssue[]; review_status?: string; review_confidence?: string; review_hint?: string | null } }>;
   };
-  const movements: LocalMovement[] = (payload.movements || []).map((movement, index) => ({
-    ...movement,
-    id: movement.id || movement.externalId || `${payload.connectionId}:${movement.occurredAt}:${movement.transactionType}:${index}`,
-    sourceFile: movement.sourceFile || movement.raw?.sourceFile || null,
-    exchange: movement.exchange || movement.raw?.sourceExchange || payload.exchange,
-    accountId: movement.accountId || null,
-    rawRow: movement.raw?.row || null,
-  }));
+  const movements: LocalMovement[] = (payload.movements || []).map((movement, index) => {
+    const raw = movement.raw;
+    return {
+      ...movement,
+      id: movement.id || movement.externalId || `${payload.connectionId}:${movement.occurredAt}:${movement.transactionType}:${index}`,
+      sourceFile: movement.sourceFile || raw?.sourceFile || null,
+      exchange: movement.exchange || raw?.sourceExchange || payload.exchange,
+      accountId: movement.accountId || null,
+      rawRow: raw?.row || null,
+      reviewIssues: movement.reviewIssues || raw?.review_issues || [],
+      reviewStatus: movement.reviewStatus || raw?.review_status || null,
+      reviewConfidence: movement.reviewConfidence || raw?.review_confidence || null,
+      reviewHint: movement.reviewHint || raw?.review_hint || null,
+    };
+  });
   if (!movements.length) throw new Error('La fuente fiscal no contiene movimientos normalizados. Revisa la importación CSV.');
   const dataset: LocalDataset = {
     version: CACHE_SCHEMA_VERSION, userId, connectionId: payload.connectionId, sourceVersion: `${payload.sourceVersion || sourceVersion}:${FISCAL_REFRESH_VERSION}`,
@@ -128,7 +140,7 @@ export function datasetToFifo(dataset: LocalDataset): { txs: FifoTx[]; assets: M
     id: movement.id, occurred_at: movement.occurredAt, transaction_type: movement.transactionType,
     base_asset_id: idFor(movement.baseAsset), base_amount: movement.baseAmount, quote_asset_id: idFor(movement.quoteAsset), quote_amount: movement.quoteAmount,
     fee_asset_id: idFor(movement.feeAsset), fee_amount: movement.feeAmount, price: movement.price, price_currency: movement.priceCurrency, account_id: movement.accountId,
-    raw_data: { original_type: movement.originalType, classification: movement.classification, sourceFile: movement.sourceFile, sourceExchange: movement.exchange, row: movement.rawRow || undefined },
+    raw_data: { original_type: movement.originalType, classification: movement.classification, sourceFile: movement.sourceFile, sourceExchange: movement.exchange, review_issues: movement.reviewIssues || [], review_status: movement.reviewStatus, review_confidence: movement.reviewConfidence, review_hint: movement.reviewHint, row: movement.rawRow || undefined },
   }));
   return { txs, assets };
 }
