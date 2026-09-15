@@ -96,10 +96,6 @@ export async function GET(request: Request) {
     .order('imported_at', { ascending: true });
   if (importsError) return NextResponse.json({ error: importsError.message }, { status: 500 });
 
-  const sourceImports = ((imports || []) as any[]).filter((item) => item.source_content);
-
-  // Migrate legacy imports once: recover the original CSV rows from raw_data and then remove
-  // the old normalized transactions/snapshots. From this point on the browser is the data store.
   const missingImports = ((imports || []) as any[]).filter((item) => !item.source_content);
   if (missingImports.length) {
     const recovered = new Map<string, Record<string, string>[]>();
@@ -147,7 +143,8 @@ export async function GET(request: Request) {
 
   await purgeDerived(supabase, user.id, accountIds);
 
-  const sourceVersion = String(connection.last_sync_at || ((finalImports || []).map((item) => item.source_sha256 || item.id).join(':')) || new Date().toISOString());
+  const importFingerprint = (finalImports || []).map((item) => `${item.id}:${item.source_sha256 || 'legacy'}`).join('|');
+  const sourceVersion = `fiscal-v5:${connection.last_sync_at || ''}:${createHash('sha256').update(importFingerprint).digest('hex').slice(0, 16)}`;
   return NextResponse.json({
     connectionId,
     exchange: exchangeCode,
