@@ -23,7 +23,7 @@ export type LocalMovement = {
 };
 
 export type LocalDataset = {
-  version: 4;
+  version: number;
   userId: string;
   connectionId: string;
   sourceVersion: string;
