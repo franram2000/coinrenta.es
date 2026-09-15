@@ -56,7 +56,7 @@ export async function getLocalDataset(userId: string, connectionId: string): Pro
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).get(`${userId}:${connectionId}`);
     request.onsuccess = () => {
       const value = request.result as StoredRecord | undefined;
-      if (!value || value.version !== 3) return resolve(null);
+      if (!value || value.version !== 3 || !Array.isArray(value.movements) || value.movements.length === 0) return resolve(null);
       resolve({ ...value });
     };
     request.onerror = () => reject(request.error || new Error('No se pudo leer la caché local.'));
