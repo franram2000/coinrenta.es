@@ -22,9 +22,6 @@ const STORE = 'datasets';
 const CACHE_SCHEMA_VERSION = 8;
 const FISCAL_REFRESH_VERSION = 'fifo8';
 
-// The fiscal workspace must never surface stale cached results after a parser/FIFO change.
-// We still persist the normalized dataset for offline inspection, but each fiscal/dashboard
-// load asks the server for the authoritative current normalization first.
 if (typeof document !== 'undefined') {
   const styleId = 'coinrenta-hide-supabase-derived-label';
   if (!document.getElementById(styleId)) {
@@ -49,9 +46,8 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 export async function getLocalDataset(_userId: string, _connectionId: string, _sourceVersion?: string): Promise<LocalDataset | null> {
-  // Intentionally bypass cached fiscal datasets. Cached derived data caused reports to
-  // remain at zero when the normalization engine changed while last_sync_at stayed the same.
-  // The dataset is still persisted by saveLocalDataset for future offline/read-only tooling.
+  // Derived fiscal data is never used as the authoritative source. The current
+  // normalization is fetched on each workspace load, then persisted locally.
   return null;
 }
 
