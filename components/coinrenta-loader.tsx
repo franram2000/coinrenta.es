@@ -12,9 +12,10 @@ const MESSAGES = [
 type Props = {
   duration?: number;
   onComplete?: () => void;
+  contained?: boolean;
 };
 
-export default function CoinRentaLoader({ duration = 3000, onComplete }: Props) {
+export default function CoinRentaLoader({ duration = 3000, onComplete, contained = false }: Props) {
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -29,9 +30,10 @@ export default function CoinRentaLoader({ duration = 3000, onComplete }: Props) 
   }, [duration, onComplete]);
 
   return (
-    <div className="coinrenta-loader" aria-live="polite" aria-busy="true">
+    <div className={`coinrenta-loader${contained ? " coinrenta-loader-contained" : ""}`} aria-live="polite" aria-busy="true">
       <style>{`
         .coinrenta-loader{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;overflow:hidden;background:#050a12;isolation:isolate;animation:cr-loader-in .28s ease-out both}
+        .coinrenta-loader-contained{position:absolute;inset:0;z-index:100;min-height:100%;border-radius:0}
         .coinrenta-loader::before{content:"";position:absolute;inset:-24%;background:radial-gradient(circle at 50% 42%,rgba(20,203,191,.18),transparent 21%),radial-gradient(circle at 22% 72%,rgba(25,122,177,.12),transparent 23%),radial-gradient(circle at 78% 25%,rgba(112,81,191,.10),transparent 21%);filter:blur(20px);animation:cr-loader-aurora 7s ease-in-out infinite alternate}
         .coinrenta-loader::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 18%,rgba(255,255,255,.035) 50%,transparent 82%);transform:translateX(-120%);animation:cr-loader-sheen 2.6s ease-in-out infinite}
         .coinrenta-loader-orbit{position:absolute;width:min(68vw,760px);height:min(68vw,760px);border-radius:50%;border:1px solid rgba(109,224,215,.12);box-shadow:0 0 110px rgba(15,167,160,.10),inset 0 0 80px rgba(15,167,160,.035);animation:cr-loader-orbit 14s linear infinite}
