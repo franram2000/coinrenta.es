@@ -1,50 +1,150 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { calculateFifo, type FifoReport } from '@/lib/tax/fifo';
+import { calculateFifo } from '@/lib/tax/fifo';
 import { datasetToFifo, fetchConnectionDataset, mergeDatasets, type LocalDataset, type LocalMovement } from '@/lib/client/local-cache';
 
 type Connection = { id: string; label: string | null; exchange: string; exchangeName: string; status: string | null };
 type Props = { userId: string; connections: Connection[]; displayName?: string | null; plan: string };
-type YearLoss = { year: number; remaining: number; expires: number };
-type HarvestCandidate = { asset: string; quantity: number; cost: number; lastPrice: number; loss: number };
-type NonTransmission = { date: string; type: string; asset: string; amount: number | null; valueEur: number | null; exchange: string };
+type Loss = { year: number; remaining: number; expires: number };
+type Candidate = { asset: string; quantity: number; cost: number; price: number; loss: number };
+type Event = { date: string; type: string; asset: string; amount: number | null; valueEur: number | null; exchange: string };
+
 const FIAT = new Set(['EUR','USD','GBP','CHF','PLN','SEK','DKK','NOK','AUD','CAD','JPY','SGD','CNY','HKD','NZD','ZAR','TRY','BRL','MXN','INR','KRW']);
 const INCOME = new Set(['reward','interest','dividend','airdrop','cashback','income']);
-const SPECIAL = /airdrop|refer|referral|referido|bonus|bono|welcome|bienvenida/i;
-function money(v: number | null | undefined) { return v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('es-ES', { style:'currency', currency:'EUR', maximumFractionDigits:2 }); }
-function qty(v: number | null | undefined) { return v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('es-ES', { maximumFractionDigits:6 }); }
-function dateTime(v: string) { const d=new Date(v); return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',timeStyle:'short'}).format(d); }
-function original(m: LocalMovement) { return `${m.originalType || ''} ${m.transactionType || ''}`.toLowerCase(); }
-function valueEur(m: LocalMovement) { const raw=m.rawRow||{}; for(const key of ['value_eur','total_eur','amount_eur','fiat_amount_eur','proceeds_eur','eur_value','EUR Value']){const v=Number(String(raw[key]??'').replace(',','.'));if(Number.isFinite(v)&&v!==0)return Math.abs(v);} const q=Math.abs(Number(m.quoteAmount)); if(q>0&&String(m.quoteAsset||'').toUpperCase()==='EUR')return q; const b=Math.abs(Number(m.baseAmount)),p=Math.abs(Number(m.price)); if(b>0&&p>0&&String(m.priceCurrency||'').toUpperCase()==='EUR')return b*p; return null; }
+const SPECIAL = /airdrop|hard[ -]?fork|refer|referral|referido|bonus|bono|welcome|bienvenida/i;
+const money = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('es-ES', { style:'currency', currency:'EUR', maximumFractionDigits:2 });
+const qty = (v: number | null | undefined) => v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('es-ES', { maximumFractionDigits:6 });
+const dateTime = (v: string) => { const d = new Date(v); return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('es-ES',{dateStyle:'medium',timeStyle:'short'}).format(d); };
+const original = (m: LocalMovement) => `${m.originalType || ''} ${m.transactionType || ''}`.toLowerCase();
+function valueEur(m: LocalMovement) {
+  const raw = m.rawRow || {};
+  for (const key of ['value_eur','total_eur','amount_eur','fiat_amount_eur','proceeds_eur','eur_value','EUR Value']) {
+    const n = Number(String(raw[key] ?? '').replace(',', '.'));
+    if (Number.isFinite(n) && n !== 0) return Math.abs(n);
+  }
+  const q = Math.abs(Number(m.quoteAmount));
+  if (q > 0 && String(m.quoteAsset || '').toUpperCase() === 'EUR') return q;
+  const b = Math.abs(Number(m.baseAmount)); const p = Math.abs(Number(m.price));
+  return b > 0 && p > 0 && String(m.priceCurrency || '').toUpperCase() === 'EUR' ? b * p : null;
+}
 
 export default function ReportsCenter({ userId, connections, displayName, plan }: Props) {
-  const [datasets,setDatasets]=useState<LocalDataset[]>([]); const [reports,setReports]=useState<Map<number,FifoReport>>(new Map());
-  const [loading,setLoading]=useState(true); const [refreshing,setRefreshing]=useState(false); const [error,setError]=useState<string|null>(null); const [taxRate,setTaxRate]=useState(21); const [selectedYear,setSelectedYear]=useState(new Date().getFullYear()); const [generating,setGenerating]=useState<string|null>(null);
-  async function load(){setError(null); if(!connections.length){setDatasets([]);setLoading(false);return;} try{setDatasets(await Promise.all(connections.filter(c=>c.status!=='error').map(c=>fetchConnectionDataset(userId,c.id,'reports'))));}catch(e){setDatasets([]);setError(e instanceof Error?e.message:'No se pudieron cargar los datos.');}finally{setLoading(false);setRefreshing(false);}}
-  useEffect(()=>{void load();},[userId,connections.map(c=>`${c.id}:${c.status}`).join('|')]);
-  const movements=useMemo(()=>mergeDatasets(datasets),[datasets]);
-  const fifoInput=useMemo(()=>{if(!datasets.length)return null;const txs:ReturnType<typeof datasetToFifo>['txs']=[];const assets=new Map<string,ReturnType<typeof datasetToFifo>['assets'] extends Map<string,infer V>?V:never>();for(const d of datasets){const part=datasetToFifo(d);txs.push(...part.txs);for(const [id,a] of part.assets)assets.set(id,a);}return {txs,assets};},[datasets]);
-  useEffect(()=>{let cancelled=false;if(!fifoInput){setReports(new Map());return;}const years=[...new Set(movements.map(m=>new Date(m.occurredAt).getFullYear()).filter(y=>Number.isFinite(y)))];years.push(selectedYear);void Promise.all([...new Set(years)].map(async y=>[y,await calculateFifo(fifoInput.txs,y,fifoInput.assets)] as const)).then(rows=>{if(!cancelled)setReports(new Map(rows);}).catch(()=>{if(!cancelled)setReports(new Map());});return()=>{cancelled=true;};},[fifoInput,movements,selectedYear]);
-  const report=reports.get(selectedYear)||null;
-  const lossPool=useMemo<YearLoss[]>(()=>{const carry=new Map<number,{remaining:number;expires:number}>();for(const [year,r] of [...reports.entries()].sort((a,b)=>a[0]-b[0])){for(const [origin,x] of carry)if(x.expires<year||x.remaining<=.005)carry.delete(origin);const gain=r.gainKnown?r.gain:0;if(gain<-.005)carry.set(year,{remaining:Math.abs(gain),expires:year+4});if(gain>.005){let rem=gain;for(const [origin,x] of [...carry.entries()].sort((a,b)=>a[0]-b[0])){const used=Math.min(x.remaining,rem);x.remaining-=used;rem-=used;if(rem<=.005)break;carry.set(origin,x);}}}return[...carry.entries()].map(([year,x])=>({year,remaining:x.remaining,expires:x.expires})).filter(x=>x.remaining>.005);},[reports]);
-  const candidates=useMemo<HarvestCandidate[]>(()=>{if(!report)return[];const prices=new Map<string,number>();for(const m of movements){const a=String(m.baseAsset||'').toUpperCase(),p=Math.abs(Number(m.price));if(a&&!FIAT.has(a)&&p>0&&String(m.priceCurrency||'').toUpperCase()==='EUR')prices.set(a,p);}const out:HarvestCandidate[]=[];for(const [id,lots] of report.yearEndLots){const a=id.replace(/^local-asset:/,'').toUpperCase();if(FIAT.has(a))continue;let q=0,c=0;for(const lot of lots){q+=lot.qty;c+=lot.costEur??0;}const p=prices.get(a)||0;const loss=p*q-c;if(q>0&&p>0&&loss<-.01)out.push({asset:a,quantity:q,cost:c,lastPrice:p,loss});}return out.sort((a,b)=>a.loss-b.loss);},[report,movements]);
-  const events=useMemo<NonTransmission[]>(()=>movements.filter(m=>INCOME.has(String(m.transactionType||'').toLowerCase())||SPECIAL.test(original(m))).map(m=>({date:m.occurredAt,type:/airdrop/i.test(original(m))?'Airdrop':/refer|referido/i.test(original(m))?'Referido':/bonus|bono|welcome|bienvenida/i.test(original(m))?'Bono':'Rendimiento',asset:m.baseAsset||m.quoteAsset||'—',amount:m.baseAmount??null,valueEur:valueEur(m),exchange:m.exchange||'—'})),[movements]);
-  async function download(kind:string,payload:Record<string,unknown>){setGenerating(kind);setError(null);try{const r=await fetch('/api/reports/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,userName:displayName||'Titular de la cuenta',generatedAt:new Date().toISOString(),...payload})});if(!r.ok)throw new Error(await r.text()||'No se pudo generar el PDF.');const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${kind}-coinrenta.pdf`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}catch(e){setError(e instanceof Error?e.message:'No se pudo generar el PDF.');}finally{setGenerating(null);}}
-  if(loading)return <div className="reports-state"><div className="reports-spinner"/><strong>Preparando tus informes</strong><span>Estamos reuniendo el histórico disponible.</span></div>;
-  const potentialLoss=candidates.reduce((s,c)=>s+Math.min(0,c.loss),0),displayPlan=plan==='pro'||plan==='Pro'?'Pro':plan==='essential'||plan==='Esencial'?'Esencial':plan;
-  const withdrawal=movements.find(m=>['withdrawal','withdraw'].includes(String(m.transactionType))&&String(m.baseAsset||'').toUpperCase()==='EUR');
-  const previous=withdrawal?movements.slice(0,movements.indexOf(withdrawal)).slice(-4).reverse():[];
+  const [datasets, setDatasets] = useState<LocalDataset[]>([]);
+  const [reports, setReports] = useState<Map<number, any>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [taxRate, setTaxRate] = useState(21);
+  const [generating, setGenerating] = useState<string | null>(null);
+
+  async function load() {
+    setError(null);
+    try {
+      const active = connections.filter((c) => c.status !== 'error');
+      const loaded = await Promise.all(active.map((c) => fetchConnectionDataset(userId, c.id, 'reports')));
+      setDatasets(loaded);
+    } catch (e) {
+      setDatasets([]);
+      setError(e instanceof Error ? e.message : 'No se pudieron cargar los datos para los informes.');
+    } finally { setLoading(false); setRefreshing(false); }
+  }
+  useEffect(() => { void load(); }, [userId, connections.map((c) => `${c.id}:${c.status}`).join('|')]);
+
+  const movements = useMemo(() => mergeDatasets(datasets), [datasets]);
+  const fifoInput = useMemo(() => {
+    if (!datasets.length) return null;
+    const txs: any[] = []; const assets = new Map<string, any>();
+    for (const dataset of datasets) {
+      const part = datasetToFifo(dataset);
+      txs.push(...part.txs);
+      for (const [id, asset] of part.assets) assets.set(id, asset);
+    }
+    return { txs, assets };
+  }, [datasets]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!fifoInput) { setReports(new Map()); return; }
+    const years = new Set<number>(movements.map((m) => new Date(m.occurredAt).getFullYear()).filter((y) => Number.isFinite(y) && y >= 2018));
+    years.add(selectedYear);
+    void Promise.all([...years].map(async (year) => [year, await calculateFifo(fifoInput.txs, year, fifoInput.assets)] as const))
+      .then((rows) => { if (!cancelled) setReports(new Map(rows)); })
+      .catch(() => { if (!cancelled) setReports(new Map()); });
+    return () => { cancelled = true; };
+  }, [fifoInput, movements, selectedYear]);
+
+  const report = reports.get(selectedYear) || null;
+  const lossPool = useMemo<Loss[]>(() => {
+    const carry = new Map<number, { remaining:number; expires:number }>();
+    for (const [year, r] of [...reports.entries()].sort((a,b) => a[0]-b[0])) {
+      for (const [origin, item] of carry) if (item.expires < year || item.remaining <= .005) carry.delete(origin);
+      const gain = r?.gainKnown ? Number(r.gain) : 0;
+      if (gain < -.005) carry.set(year, { remaining: Math.abs(gain), expires: year + 4 });
+      if (gain > .005) {
+        let rem = gain;
+        for (const [origin, item] of [...carry.entries()].sort((a,b) => a[0]-b[0])) {
+          const used = Math.min(item.remaining, rem); item.remaining -= used; rem -= used; carry.set(origin, item); if (rem <= .005) break;
+        }
+      }
+    }
+    return [...carry.entries()].filter(([,x]) => x.remaining > .005).map(([year,x]) => ({ year, remaining:x.remaining, expires:x.expires }));
+  }, [reports]);
+
+  const candidates = useMemo<Candidate[]>(() => {
+    if (!report) return [];
+    const prices = new Map<string,number>();
+    for (const m of movements) {
+      const asset = String(m.baseAsset || '').toUpperCase(); const price = Math.abs(Number(m.price));
+      if (asset && !FIAT.has(asset) && price > 0 && String(m.priceCurrency || '').toUpperCase() === 'EUR') prices.set(asset, price);
+    }
+    const result: Candidate[] = [];
+    for (const [id, lots] of report.yearEndLots as Map<string, any[]>) {
+      const asset = id.replace(/^local-asset:/,'').toUpperCase(); if (FIAT.has(asset)) continue;
+      let quantity = 0, cost = 0; for (const lot of lots) { quantity += Number(lot.qty) || 0; cost += Number(lot.costEur) || 0; }
+      const price = prices.get(asset) || 0; const loss = price * quantity - cost;
+      if (quantity > 0 && price > 0 && loss < -.01) result.push({ asset, quantity, cost, price, loss });
+    }
+    return result.sort((a,b) => a.loss - b.loss);
+  }, [report, movements]);
+
+  const events = useMemo<Event[]>(() => movements.filter((m) => INCOME.has(String(m.transactionType || '').toLowerCase()) || SPECIAL.test(original(m))).map((m) => {
+    const text = original(m);
+    const type = /hard[ -]?fork/i.test(text) ? 'Hard fork' : /airdrop/i.test(text) ? 'Airdrop' : /refer|referido/i.test(text) ? 'Referido' : /bonus|bono|welcome|bienvenida/i.test(text) ? 'Bono' : 'Rendimiento';
+    return { date:m.occurredAt, type, asset:m.baseAsset || m.quoteAsset || '—', amount:m.baseAmount ?? null, valueEur:valueEur(m), exchange:m.exchange || '—' };
+  }), [movements]);
+
+  async function download(kind: string, payload: Record<string,unknown>) {
+    setGenerating(kind); setError(null);
+    try {
+      const r = await fetch('/api/reports/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind,userName:displayName||'Titular de la cuenta',generatedAt:new Date().toISOString(),...payload})});
+      if (!r.ok) throw new Error(await r.text() || 'No se pudo generar el PDF.');
+      const blob = await r.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`${kind}-coinrenta.pdf`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    } catch(e) { setError(e instanceof Error ? e.message : 'No se pudo generar el PDF.'); } finally { setGenerating(null); }
+  }
+
+  if (loading) return <div className="reports-state"><div className="reports-spinner"/><strong>Preparando tus informes</strong><span>Estamos reuniendo el histórico disponible.</span></div>;
+  const potentialLoss = candidates.reduce((s,c) => s + Math.min(0,c.loss), 0);
+  const displayPlan = plan === 'pro' || plan === 'Pro' ? 'Pro' : plan === 'essential' || plan === 'Esencial' ? 'Esencial' : plan;
+
   return <div className="reports-page">
-    <div className="reports-hero"><div><span className="section-kicker">Documentación fiscal</span><h2>Informes y herramientas</h2><p>Documentación estructurada y simuladores sobre el histórico normalizado de tu cuenta.</p></div><div className="reports-coverage"><strong>{movements.length.toLocaleString('es-ES')}</strong><span>movimientos analizados</span><button className="btn btn-outline" type="button" onClick={()=>{setRefreshing(true);void load();}} disabled={refreshing}>{refreshing?'Actualizando…':'Actualizar datos'}</button></div></div>
+    <div className="reports-hero"><div><span className="section-kicker">Documentación fiscal</span><h2>Informes y herramientas</h2><p>Documentación estructurada y análisis construidos sobre el histórico normalizado de tu cuenta.</p></div><div className="reports-coverage"><strong>{movements.length.toLocaleString('es-ES')}</strong><span>movimientos analizados</span><button className="btn btn-outline" type="button" onClick={()=>{setRefreshing(true);void load();}} disabled={refreshing}>{refreshing?'Actualizando…':'Actualizar datos'}</button></div></div>
     {error&&<div className="reports-error" role="alert">{error}</div>}
     <div className="reports-yearbar"><label>Ejercicio analizado<select value={selectedYear} onChange={e=>setSelectedYear(Number(e.target.value))}>{Array.from({length:8},(_,i)=>new Date().getFullYear()+1-i).map(y=><option key={y} value={y}>{y}</option>)}</select></label><span>Plan actual: <strong>{displayPlan}</strong></span></div>
     <div className="reports-grid">
-      <article className="report-card report-card-wide"><div className="report-card-top"><div className="report-icon">↗</div><span className="report-badge">Esencial</span></div><h3>Trazabilidad y Origen de Fondos</h3><p>Genera un PDF de apoyo que ordena la retirada EUR y los movimientos previos disponibles para documentar la trazabilidad.</p><div className="origin-preview">{withdrawal?<><strong>Retirada detectada: {money(valueEur(withdrawal))}</strong><div>{previous.slice(0,3).map(m=><span key={m.id}>{dateTime(m.occurredAt)} · {m.transactionType} · {m.baseAsset||'—'} {qty(m.baseAmount)}</span>)}</div></>:<span>No se ha localizado una retirada EUR en el histórico actual.</span>}</div><button className="report-action" type="button" disabled={generating==='origen-fondos'||!withdrawal} onClick={()=>download('origen-fondos',{movements:withdrawal?[...previous,withdrawal].slice(-35):[]})}>{generating==='origen-fondos'?'Generando PDF…':'Generar informe PDF →'}</button></article>
-      <article className="report-card"><div className="report-card-top"><div className="report-icon">◫</div><span className="report-badge">Esencial</span></div><h3>Bolsa de Pérdidas a Compensar</h3><p>Controla pérdidas de transmisiones pendientes según el histórico y su horizonte de cuatro años.</p><div className="loss-table">{lossPool.length?lossPool.slice(0,5).map(x=><div key={x.year}><span>{x.year}</span><strong>{money(x.remaining)}</strong><small>Vence {x.expires}</small></div>):<div className="reports-empty">No se ha identificado una bolsa pendiente.</div>}</div><button className="report-action" type="button" disabled={generating==='perdidas'||!lossPool.length} onClick={()=>download('bolsa-perdidas',{losses:lossPool})}>{generating==='perdidas'?'Generando PDF…':'Descargar informe →'}</button></article>
-      <article className="report-card"><div className="report-card-top"><div className="report-icon">◒</div><span className="report-badge pro">Pro</span></div><h3>Simulador de optimización de diciembre</h3><p>Detecta posiciones con pérdida latente estimada y calcula un escenario de ahorro con un tipo de referencia editable.</p><div className="harvest-controls"><label>Tipo de referencia<input type="number" min="0" max="100" step="0.5" value={taxRate} onChange={e=>setTaxRate(Number(e.target.value))}/></label></div><div className="harvest-total"><span>Pérdida potencial identificada</span><strong>{money(potentialLoss)}</strong><small>Ahorro orientativo al {taxRate.toFixed(1).replace('.',',')}%: {money(Math.abs(potentialLoss)*(taxRate/100))}</small></div><div className="loss-table">{candidates.slice(0,5).map(c=><div key={c.asset}><span>{c.asset}</span><strong>{money(c.loss)}</strong><small>{qty(c.quantity)} uds · ref. {money(c.lastPrice)}</small></div>)}{!candidates.length&&<div className="reports-empty">No hay posiciones con pérdida estimable por ahora.</div>}</div><button className="report-action" type="button" disabled={generating==='harvest'||!candidates.length} onClick={()=>download('optimizacion-diciembre',{taxRate,candidates:candidates.slice(0,20),selectedYear})}>{generating==='harvest'?'Generando PDF…':'Generar extracto →'}</button></article>
-      <article className="report-card"><div className="report-card-top"><div className="report-icon">✦</div><span className="report-badge">Esencial</span></div><h3>Ganancias No Transmisivas</h3><p>Separa airdrops, referidos, bonos y otros eventos no derivados de una transmisión para revisarlos aparte.</p><div className="nontrans-summary"><strong>{events.length}</strong><span>eventos detectados</span></div><div className="nontrans-list">{events.slice(0,5).map(e=><div key={`${e.date}:${e.asset}:${e.type}`}><span>{e.type}</span><strong>{e.asset}</strong><small>{dateTime(e.date)} · {money(e.valueEur)}</small></div>)}{!events.length&&<div className="reports-empty">No se han detectado eventos de este tipo.</div>}</div><button className="report-action" type="button" disabled={generating==='no-transmisivas'||!events.length} onClick={()=>download('ganancias-no-transmisivas',{events})}>{generating==='no-transmisivas'?'Generando PDF…':'Descargar informe →'}</button></article>
+      <article className="report-card report-card-wide"><div className="report-card-top"><div className="report-icon">↗</div><span className="report-badge">Esencial</span></div><h3>Trazabilidad y Origen de Fondos</h3><p>Ordena la retirada en EUR y los movimientos previos disponibles para documentar la trazabilidad económica.</p><div className="origin-preview">{withdrawalPreview(movements)}</div><button className="report-action" type="button" disabled={generating==='origen-fondos'||!movements.length} onClick={()=>download('origen-fondos',{movements:movements.slice(-35),selectedYear})}>{generating==='origen-fondos'?'Generando PDF…':'Generar informe PDF →'}</button></article>
+      <article className="report-card"><div className="report-card-top"><div className="report-icon">◫</div><span className="report-badge">Esencial</span></div><h3>Bolsa de Pérdidas a Compensar</h3><p>Controla pérdidas de transmisiones pendientes y el horizonte de compensación calculado.</p><div className="loss-table">{lossPool.length?lossPool.slice(0,5).map(x=><div key={x.year}><span>{x.year}</span><strong>{money(x.remaining)}</strong><small>Vence {x.expires}</small></div>):<div className="reports-empty">No se ha identificado una bolsa pendiente.</div>}</div><button className="report-action" type="button" disabled={generating==='perdidas'||!lossPool.length} onClick={()=>download('bolsa-perdidas',{losses:lossPool})}>{generating==='perdidas'?'Generando PDF…':'Descargar informe →'}</button></article>
+      <article className="report-card"><div className="report-card-top"><div className="report-icon">◒</div><span className="report-badge pro">Pro</span></div><h3>Simulador de optimización de diciembre</h3><p>Detecta posiciones con pérdida latente estimada a partir de la última valoración EUR encontrada en tu histórico.</p><div className="harvest-controls"><label>Tipo de referencia<input type="number" min="0" max="100" step="0.5" value={taxRate} onChange={e=>setTaxRate(Number(e.target.value))}/></label></div><div className="harvest-total"><span>Pérdida potencial identificada</span><strong>{money(potentialLoss)}</strong><small>Ahorro orientativo al {taxRate.toFixed(1).replace('.',',')}%: {money(Math.abs(potentialLoss)*(taxRate/100))}</small></div><div className="loss-table">{candidates.slice(0,5).map(c=><div key={c.asset}><span>{c.asset}</span><strong>{money(c.loss)}</strong><small>{qty(c.quantity)} uds · ref. {money(c.price)}</small></div>)}{!candidates.length&&<div className="reports-empty">No hay posiciones con pérdida estimable.</div>}</div><button className="report-action" type="button" disabled={generating==='harvest'||!candidates.length} onClick={()=>download('optimizacion-diciembre',{taxRate,candidates:candidates.slice(0,20),selectedYear})}>{generating==='harvest'?'Generando PDF…':'Generar extracto →'}</button></article>
+      <article className="report-card"><div className="report-card-top"><div className="report-icon">✦</div><span className="report-badge">Esencial</span></div><h3>Ganancias No Transmisivas</h3><p>Separa airdrops, hard forks, referidos y bonos para revisarlos con fecha, activo y valoración disponible.</p><div className="nontrans-summary"><strong>{events.length}</strong><span>eventos detectados</span></div><div className="nontrans-list">{events.slice(0,5).map(e=><div key={`${e.date}:${e.asset}:${e.type}`}><span>{e.type}</span><strong>{e.asset}</strong><small>{dateTime(e.date)} · {money(e.valueEur)}</small></div>)}{!events.length&&<div className="reports-empty">No se han detectado eventos de este tipo.</div>}</div><button className="report-action" type="button" disabled={generating==='no-transmisivas'||!events.length} onClick={()=>download('ganancias-no-transmisivas',{events})}>{generating==='no-transmisivas'?'Generando PDF…':'Descargar informe →'}</button></article>
     </div>
-    <div className="reports-methodology"><div><span className="section-kicker">Metodología</span><h3>Resultados trazables, no valores inventados</h3><p>CoinRenta utiliza el histórico normalizado y su motor FIFO local. Cuando falta coste, valoración o correspondencia suficiente, el informe lo marca como estimado o pendiente de revisión.</p></div><div className="reports-legal-note">Estos documentos son de apoyo. No garantizan la aceptación de un banco o de la Administración tributaria y no sustituyen asesoramiento profesional.</div></div>
+    <div className="reports-methodology"><div><span className="section-kicker">Metodología</span><h3>Resultados trazables, sin inventar datos</h3><p>Los informes utilizan el histórico normalizado y el motor FIFO de CoinRenta. Cuando faltan datos de coste, valoración o correspondencia suficiente, se muestra una estimación o se marca para revisión.</p></div><div className="reports-legal-note">Son documentos de apoyo. No garantizan la aceptación de un banco o de la Administración tributaria y no sustituyen asesoramiento profesional.</div></div>
   </div>;
+}
+
+function withdrawalPreview(movements: LocalMovement[]) {
+  const withdrawal = movements.find((m) => ['withdrawal','withdraw'].includes(String(m.transactionType)) && String(m.baseAsset || '').toUpperCase() === 'EUR');
+  if (!withdrawal) return <span>No se ha localizado una retirada EUR en el histórico actual.</span>;
+  const previous = movements.slice(0, movements.indexOf(withdrawal)).slice(-4).reverse();
+  return <><strong>Retirada detectada: {money(valueEur(withdrawal))}</strong><div>{previous.slice(0,3).map((m) => <span key={m.id}>{dateTime(m.occurredAt)} · {m.transactionType} · {m.baseAsset || '—'} {qty(m.baseAmount)}</span>)}</div></>;
 }
