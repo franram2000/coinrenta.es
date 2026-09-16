@@ -36,11 +36,8 @@ export default function DashboardLoadingGate() {
 
     const check = () => {
       const loading = pageStillLoading(pathname || "");
-      if (loading) {
-        stableFrames = 0;
-      } else {
-        stableFrames += 1;
-      }
+      if (loading) stableFrames = 0;
+      else stableFrames += 1;
       if (stableFrames >= 2) setVisible(false);
       frame = window.requestAnimationFrame(check);
     };
@@ -50,5 +47,8 @@ export default function DashboardLoadingGate() {
   }, [pathname]);
 
   if (!visible) return null;
-  return <CoinRentaLoader contained />;
+  return <>
+    <style>{`.app-main:has(.coinrenta-loader-contained) .workspace-loading{opacity:0!important;visibility:hidden!important;pointer-events:none!important}`}</style>
+    <CoinRentaLoader contained />
+  </>;
 }
