@@ -39,10 +39,7 @@ export async function POST() {
     return NextResponse.json({ error: data?.error?.detail || data?.error?.message || "No se pudo abrir el portal de Paddle." }, { status: 502 });
   }
 
-  const url = data?.data?.urls?.subscriptions?.[0]?.cancelSubscription
-    || data?.data?.urls?.subscriptions?.[0]?.cancel_subscription
-    || data?.data?.urls?.general?.overview;
-
+  const url = data?.data?.urls?.general?.overview;
   if (!url) return NextResponse.json({ error: "Paddle no devolvió una URL de portal válida." }, { status: 502 });
   return NextResponse.json({ url });
 }
