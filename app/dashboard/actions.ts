@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -48,9 +49,72 @@ export async function updateProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const displayName = String(formData.get("display_name") || "").trim() || null;
-  const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", user.id);
+  const countryCode = String(formData.get("country_code") || "ES").trim().toUpperCase();
+  const timezone = String(formData.get("timezone") || "Europe/Madrid").trim();
+  if (!/^[A-Z]{2}$/.test(countryCode)) throw new Error("País no válido.");
+  if (!timezone || timezone.length > 100) throw new Error("Zona horaria no válida.");
+  const { error } = await supabase.from("profiles").update({ display_name: displayName, country_code: countryCode, timezone }).eq("id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard"); revalidatePath("/dashboard/configuracion");
+}
+
+export async function deleteOwnAccount(formData: FormData) {
+  const confirmation = String(formData.get("confirmation") || "").trim();
+  if (confirmation !== "ELIMINAR") throw new Error("Escribe ELIMINAR para confirmar el borrado de la cuenta.");
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("stripe_customer_id,stripe_subscription_id,subscription_status").eq("id", user.id).maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+
+  const subscriptionId = String(profile?.stripe_subscription_id || "").trim();
+  const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
+  if (subscriptionId && stripeSecret && ["active", "trialing", "past_due", "unpaid"].includes(String(profile?.subscription_status || ""))) {
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${stripeSecret}` },
+      cache: "no-store",
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error?.message || "No se pudo cancelar la suscripción de Stripe. La cuenta no se ha eliminado.");
+  }
+
+  const { data: connections, error: connectionsError } = await supabase.from("exchange_connections").select("id,provider_type,api_secret_id").eq("user_id", user.id);
+  if (connectionsError) throw new Error(connectionsError.message);
+  for (const connection of connections || []) {
+    if (String(connection.provider_type || "") === "api" && connection.api_secret_id) {
+      const { error } = await supabase.rpc("delete_exchange_secret", { p_connection_id: connection.id });
+      if (error) throw new Error(`No se pudo eliminar de forma segura una credencial: ${error.message}`);
+    }
+  }
+
+  const accountTables = ["balance_snapshots", "transactions", "imports"];
+  const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id").eq("user_id", user.id);
+  if (accountsError) throw new Error(accountsError.message);
+  const accountIds = (accounts || []).map((account: { id: string }) => account.id);
+  if (accountIds.length) {
+    for (const table of accountTables) {
+      const { error } = await supabase.from(table).delete().eq("user_id", user.id).in("account_id", accountIds);
+      if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+    }
+    const { error } = await supabase.from("accounts").delete().eq("user_id", user.id).in("id", accountIds);
+    if (error) throw new Error(`No se pudieron eliminar las cuentas: ${error.message}`);
+  }
+  const { error: connectionDeleteError } = await supabase.from("exchange_connections").delete().eq("user_id", user.id);
+  if (connectionDeleteError) throw new Error(`No se pudieron eliminar las conexiones: ${connectionDeleteError.message}`);
+
+  const admin = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } },
+  );
+  const { error: deleteUserError } = await admin.auth.admin.deleteUser(user.id, false);
+  if (deleteUserError) throw new Error(`No se pudo eliminar la cuenta de autenticación: ${deleteUserError.message}`);
+
+  await supabase.auth.signOut();
+  redirect("/login?deleted=1");
 }
 
 export async function adminUpdateUser(formData: FormData) {
