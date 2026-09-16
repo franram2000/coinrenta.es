@@ -35,7 +35,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
       <section className="subscription-shell">
         {success && <div className="subscription-notice">✓ Pago completado. Tu plan se actualizará automáticamente en cuanto Paddle confirme la suscripción.</div>}
         <div className="subscription-current"><div className="subscription-current-copy"><span className="subscription-current-dot"/><div><strong>Tu plan actual</strong><small>{profile?.subscription_status ? `Estado: ${profile.subscription_status}` : "Sin suscripción de pago"}</small></div></div><span className="subscription-current-plan">{plan === "admin" ? "Administrador" : plan === "pro" ? "Pro" : plan === "essential" ? "Esencial" : "Free"}</span></div>
-        <SubscriptionPlans plan={plan} interval={profile?.subscription_interval || null} periodEnd={profile?.subscription_current_period_end || null}/>
+        <SubscriptionPlans userId={user.id} customerEmail={user.email || null} plan={plan} interval={profile?.subscription_interval || null} periodEnd={profile?.subscription_current_period_end || null}/>
         {paid && <p className="subscription-management-hint">Desde <strong>Gestionar suscripción</strong> puedes cambiar tu suscripción, actualizar tus datos de facturación o cancelar la renovación mediante el portal seguro de Paddle.</p>}
       </section>
       <p className="subscription-foot">Las funciones disponibles pueden evolucionar. CoinRenta proporciona herramientas de organización y cálculo de información fiscal; la responsabilidad de revisar y presentar correctamente la declaración corresponde al usuario y, cuando proceda, a su asesor.</p>
