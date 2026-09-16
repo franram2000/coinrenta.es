@@ -14,8 +14,8 @@ function verifySignature(payload: string, signature: string, secret: string) {
 
 function admin() { return createSupabaseAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } }); }
 function planFromPrice(priceId: string | undefined) {
-  if (priceId && priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || priceId === process.env.STRIPE_PRICE_PRO_YEARLY) return "pro";
-  if (priceId && priceId === process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY || priceId === process.env.STRIPE_PRICE_ESSENTIAL_YEARLY) return "essential";
+  if (priceId && (priceId === process.env.STRIPE_PRICE_PRO_MONTHLY || priceId === process.env.STRIPE_PRICE_PRO_YEARLY)) return "pro";
+  if (priceId && (priceId === process.env.STRIPE_PRICE_ESSENTIAL_MONTHLY || priceId === process.env.STRIPE_PRICE_ESSENTIAL_YEARLY)) return "essential";
   return "free";
 }
 function intervalFromPrice(priceId: string | undefined) {
@@ -36,13 +36,23 @@ async function syncSubscription(subscription: any, fallbackUserId?: string) {
   const plan = active ? planFromPrice(priceId) : "free";
   const interval = active ? intervalFromPrice(priceId) : null;
   const periodEnd = subscription?.current_period_end ? new Date(Number(subscription.current_period_end) * 1000).toISOString() : null;
-  await supabase.from("profiles").update({ stripe_customer_id: customerId || undefined, stripe_subscription_id: active ? subscription.id : null, subscription_plan: plan, subscription_interval: interval, subscription_status: subscription?.status || "canceled", subscription_current_period_end: periodEnd }).eq("id", targetId);
+  const { error } = await supabase.from("profiles").update({ stripe_customer_id: customerId || null, stripe_subscription_id: active ? subscription.id : null, subscription_plan: plan, subscription_interval: interval, subscription_status: subscription?.status || "canceled", subscription_current_period_end: periodEnd }).eq("id", targetId);
+  if (error) throw new Error(error.message);
+}
+
+async function syncInvoice(subscriptionId: string, forceFree = false) {
+  const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, { headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }, cache: "no-store" });
+  const subscription = await response.json();
+  if (!response.ok) throw new Error(subscription?.error?.message || "No se pudo consultar la suscripción en Stripe.");
+  if (forceFree) subscription.status = "past_due";
+  await syncSubscription(subscription);
 }
 
 export async function POST(request: Request) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET; const body = await request.text(); const signature = request.headers.get("stripe-signature") || "";
   if (!secret || !verifySignature(body, signature, secret)) return NextResponse.json({ error: "Firma de webhook no válida." }, { status: 400 });
-  const event = JSON.parse(body);
+  let event: any;
+  try { event = JSON.parse(body); } catch { return NextResponse.json({ error: "Evento inválido." }, { status: 400 }); }
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object; const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id; const userId = session.client_reference_id || session.metadata?.user_id;
@@ -53,10 +63,9 @@ export async function POST(request: Request) {
     } else if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) {
       await syncSubscription(event.data.object);
     } else if (event.type === "invoice.payment_failed") {
-      const invoice = event.data.object; if (invoice.subscription) {
-        const response = await fetch(`https://api.stripe.com/v1/subscriptions/${invoice.subscription}`, { headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` }, cache: "no-store" });
-        const subscription = await response.json(); if (response.ok) await syncSubscription(subscription);
-      }
+      const invoice = event.data.object; if (invoice.subscription) await syncInvoice(String(invoice.subscription), true);
+    } else if (event.type === "invoice.paid") {
+      const invoice = event.data.object; if (invoice.subscription) await syncInvoice(String(invoice.subscription), false);
     }
     return NextResponse.json({ received: true });
   } catch (error) { console.error("Stripe webhook error", error); return NextResponse.json({ error: "No se pudo sincronizar la suscripción." }, { status: 500 }); }
