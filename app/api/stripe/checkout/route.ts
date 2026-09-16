@@ -27,15 +27,37 @@ export async function POST(request: Request) {
 
   const origin = new URL(request.url).origin;
   const params = new URLSearchParams();
-  params.set("mode", "subscription"); params.set("line_items[0][price]", price); params.set("line_items[0][quantity]", "1");
-  params.set("success_url", `${origin}/dashboard/suscripcion?success=1`); params.set("cancel_url", `${origin}/dashboard/suscripcion?canceled=1`);
-  params.set("client_reference_id", user.id); params.set("customer_email", user.email || "");
-  params.set("subscription_data[metadata][user_id]", user.id); params.set("subscription_data[metadata][plan]", plan); params.set("subscription_data[metadata][interval]", interval);
-  if (profile?.stripe_customer_id) { params.delete("customer_email"); params.set("customer", profile.stripe_customer_id); }
+  params.set("mode", "subscription");
+  params.set("line_items[0][price]", price);
+  params.set("line_items[0][quantity]", "1");
+  params.set("success_url", `${origin}/dashboard/suscripcion?success=1&session_id={CHECKOUT_SESSION_ID}`);
+  params.set("cancel_url", `${origin}/dashboard/suscripcion?canceled=1`);
+  params.set("client_reference_id", user.id);
+  params.set("customer_email", user.email || "");
+  params.set("subscription_data[metadata][user_id]", user.id);
+  params.set("subscription_data[metadata][plan]", plan);
+  params.set("subscription_data[metadata][interval]", interval);
+  if (profile?.stripe_customer_id) {
+    params.delete("customer_email");
+    params.set("customer", profile.stripe_customer_id);
+  }
 
-  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", { method: "POST", headers: { Authorization: `Bearer ${stripeKey()}`, "Content-Type": "application/x-www-form-urlencoded" }, body: params, cache: "no-store" });
+  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${stripeKey()}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+    cache: "no-store",
+  });
   const data = await response.json();
   if (!response.ok) return NextResponse.json({ error: data?.error?.message || "Stripe no pudo crear el checkout." }, { status: 502 });
-  if (data.customer && !profile?.stripe_customer_id) await supabase.from("profiles").update({ stripe_customer_id: data.customer }).eq("id", user.id);
+
+  if (data.customer && !profile?.stripe_customer_id) {
+    const { error } = await supabase.from("profiles").update({ stripe_customer_id: data.customer }).eq("id", user.id);
+    if (error) console.error("Stripe customer sync error", error);
+  }
+
   return NextResponse.json({ url: data.url });
 }
