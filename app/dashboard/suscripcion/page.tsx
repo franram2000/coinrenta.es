@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import "./subscription.css";
 import { createClient } from "@/lib/supabase/server";
 import CoinRentaLogo from "@/components/coinrenta-logo";
 import SubscriptionPlans from "./subscription-plans";
