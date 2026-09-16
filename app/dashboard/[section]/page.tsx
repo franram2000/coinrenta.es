@@ -59,7 +59,10 @@ export default async function DashboardSection({ params, searchParams }: { param
     const year = Number.isInteger(requestedYear) && requestedYear >= 2018 && requestedYear <= new Date().getFullYear() + 1 ? requestedYear : new Date().getFullYear();
     const mode = section === 'renta' ? 'renta' : section;
     const plan = profile?.role === 'admin' ? 'admin' : (profile?.subscription_plan || 'free');
-    return <LocalWorkspace userId={user.id} connections={connections} mode={mode} isPro={plan === 'pro' || profile?.role === 'admin'} displayName={profile?.display_name || null} year={year} />;
+    const isAdmin = profile?.role === 'admin';
+    const canUseRenta = plan === 'pro' || plan === 'essential' || isAdmin;
+    const isPro = section === 'renta' ? canUseRenta : plan === 'pro' || isAdmin;
+    return <LocalWorkspace userId={user.id} connections={connections} mode={mode} isPro={isPro} displayName={profile?.display_name || null} year={year} />;
   }
 
   const { data: profile } = await supabase.from('profiles').select('display_name,country_code,timezone,role,subscription_plan,subscription_interval,subscription_status,subscription_current_period_end').eq('id', user.id).maybeSingle();
