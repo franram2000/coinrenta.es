@@ -19,6 +19,7 @@ const links = [
   ["Privacidad", "/legal/privacidad"],
   ["Cookies", "/legal/cookies"],
   ["Términos", "/legal/terminos"],
+  ["Devoluciones", "/legal/devoluciones"],
 ] as const;
 
 export default function LegalPage({ label, title, updated, intro, activePath, sections }: LegalPageProps) {
@@ -78,6 +79,7 @@ export default function LegalPage({ label, title, updated, intro, activePath, se
             <Link href="/legal/privacidad">Privacidad</Link>
             <Link href="/legal/cookies">Cookies</Link>
             <Link href="/legal/terminos">Términos</Link>
+            <Link href="/legal/devoluciones">Devoluciones</Link>
           </div>
         </footer>
       </div>
