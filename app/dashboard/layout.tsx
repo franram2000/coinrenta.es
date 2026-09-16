@@ -13,6 +13,7 @@ import "./spacing-fix.css";
 import "./accessibility.css";
 import "./workspace-loading.css";
 import "./suscripcion/subscription.css";
+import "./settings.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardSidebar from "./dashboard-sidebar";
