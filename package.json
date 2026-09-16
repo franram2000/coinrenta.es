@@ -10,6 +10,8 @@
     "verify:tax": "node --experimental-strip-types scripts/verify-fifo.mjs"
   },
   "dependencies": {
+    "@paddle/paddle-js": "^1.6.5",
+    "@paddle/paddle-node-sdk": "^3.10.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.116.0",
     "next": "16.3.3",
