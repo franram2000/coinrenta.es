@@ -6,9 +6,7 @@ import CoinRentaLoader from "@/components/coinrenta-loader";
 
 const TARGET_PATHS = new Set(["/dashboard", "/dashboard/movimientos", "/dashboard/renta"]);
 
-function isTarget(pathname: string | null) {
-  return TARGET_PATHS.has(pathname || "");
-}
+function isTarget(pathname: string | null) { return TARGET_PATHS.has(pathname || ""); }
 
 function pageStillLoading(pathname: string) {
   if (pathname === "/dashboard") {
@@ -25,15 +23,20 @@ export default function DashboardLoadingGate() {
   const [visible, setVisible] = useState(() => isTarget(pathname));
 
   useEffect(() => {
-    if (!isTarget(pathname)) {
+    const target = isTarget(pathname);
+    if (!target) {
       setVisible(false);
+      document.documentElement.style.removeProperty("overflow");
+      document.body.style.removeProperty("overflow");
       return;
     }
 
     setVisible(true);
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
     let frame = 0;
     let stableFrames = 0;
-
     const check = () => {
       const loading = pageStillLoading(pathname || "");
       if (loading) stableFrames = 0;
@@ -41,10 +44,24 @@ export default function DashboardLoadingGate() {
       if (stableFrames >= 2) setVisible(false);
       frame = window.requestAnimationFrame(check);
     };
-
     frame = window.requestAnimationFrame(check);
-    return () => window.cancelAnimationFrame(frame);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.documentElement.style.removeProperty("overflow");
+      document.body.style.removeProperty("overflow");
+    };
   }, [pathname]);
+
+  useEffect(() => {
+    if (!visible || !isTarget(pathname)) return;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.removeProperty("overflow");
+      document.body.style.removeProperty("overflow");
+    };
+  }, [pathname, visible]);
 
   if (!visible) return null;
   return <>
