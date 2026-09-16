@@ -128,6 +128,7 @@ export default function Home() {
           </nav>
           <div className="lv-actions">
             <Link className="lv-btn lv-btn-ghost" href="/login">Ya tengo una cuenta</Link>
+            <Link className="lv-btn" href="/precios" style={{ background: "linear-gradient(135deg, rgba(104,238,229,.16), rgba(15,167,160,.08))", borderColor: "rgba(104,238,229,.38)", color: "#bffaf5", boxShadow: "0 0 24px rgba(104,238,229,.12)" }}>✦ Ver precios <span>↗</span></Link>
             <Link className="lv-btn lv-btn-primary" href="/registro">Comenzar <span>→</span></Link>
           </div>
         </div>
