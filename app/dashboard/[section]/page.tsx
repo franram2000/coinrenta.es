@@ -6,13 +6,14 @@ import { updateProfile } from '../actions';
 import ExchangeManager from '../exchange-manager';
 import DeleteConnectionButton from '../delete-connection-button';
 import LocalWorkspace, { type LocalConnection } from '../local-workspace';
+import AccountSettings from '../account-settings';
 
 const sections: Record<string, { title: string; description: string }> = {
   exchanges: { title: 'Conexiones', description: 'Gestiona tus exchanges e importa sus movimientos mediante CSV.' },
   movimientos: { title: 'Movimientos', description: 'Consulta los movimientos normalizados desde la caché local del dispositivo.' },
   renta: { title: 'Renta', description: 'Revisa los datos fiscales calculados localmente.' },
   fiscalidad: { title: 'Fiscalidad', description: 'Revisa los datos fiscales calculados localmente.' },
-  configuracion: { title: 'Configuración', description: 'Gestiona tu perfil y tu suscripción.' },
+  configuracion: { title: 'Configuración', description: 'Gestiona tu cuenta, preferencias, seguridad y suscripción.' },
   suscripcion: { title: 'Suscripción', description: 'Consulta y gestiona tu plan de CoinRenta.' },
 };
 export const dynamic = 'force-dynamic';
@@ -63,6 +64,14 @@ export default async function DashboardSection({ params, searchParams }: { param
     const canUseRenta = plan === 'pro' || plan === 'essential' || isAdmin;
     const isPro = section === 'renta' ? canUseRenta : plan === 'pro' || isAdmin;
     return <LocalWorkspace userId={user.id} connections={connections} mode={mode} isPro={isPro} displayName={profile?.display_name || null} year={year} />;
+  }
+
+  if (section === 'configuracion') {
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('display_name,country_code,timezone,role,subscription_plan,subscription_interval,subscription_status,subscription_current_period_end').eq('id', user.id).maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    const role = profile?.role || 'free';
+    const plan = role === 'admin' ? 'Admin' : profile?.subscription_plan === 'pro' ? 'Pro' : profile?.subscription_plan === 'essential' ? 'Esencial' : 'Free';
+    return <><SectionHeader item={item}/><section className="dashboard-content settings-page"><AccountSettings email={user.email || ''} displayName={profile?.display_name || null} country={profile?.country_code || 'ES'} timezone={profile?.timezone || 'Europe/Madrid'} plan={plan} interval={profile?.subscription_interval || null} status={profile?.subscription_status || null} periodEnd={profile?.subscription_current_period_end || null} createdAt={user.created_at || null}/></section></>;
   }
 
   const { data: profile } = await supabase.from('profiles').select('display_name,country_code,timezone,role,subscription_plan,subscription_interval,subscription_status,subscription_current_period_end').eq('id', user.id).maybeSingle();
