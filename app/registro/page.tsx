@@ -7,6 +7,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RegisterPage() {
-  return <AuthForm mode="register" />;
+export default function RegisterPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  return <AuthForm mode="register" plan={searchParams.then((params) => params.plan === "pro" ? "pro" : params.plan === "essential" ? "essential" : undefined)} />;
 }
