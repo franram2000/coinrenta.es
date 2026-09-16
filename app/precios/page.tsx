@@ -98,7 +98,12 @@ export default function PricingPage() {
       </section>
 
       <footer className="pricing-footer">
-        <Link href="/">← Volver a CoinRenta</Link>
+        <div className="pricing-footer-links">
+          <Link href="/">← Volver a CoinRenta</Link>
+          <Link href="/legal/terminos">Términos</Link>
+          <Link href="/legal/devoluciones">Devoluciones</Link>
+          <Link href="/legal/privacidad">Privacidad</Link>
+        </div>
         <span>Herramienta de organización y apoyo fiscal. No sustituye el asesoramiento fiscal profesional.</span>
       </footer>
     </main>
