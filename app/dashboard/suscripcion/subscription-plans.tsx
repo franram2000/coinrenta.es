@@ -3,7 +3,7 @@
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 import { useEffect, useMemo, useState } from "react";
 
-type Props = { plan: string; interval: string | null; periodEnd: string | null };
+type Props = { userId: string; customerEmail: string | null; plan: string; interval: string | null; periodEnd: string | null };
 type Tier = "essential" | "pro";
 
 const plans = [
@@ -14,16 +14,16 @@ const plans = [
 
 const PRICE_IDS = {
   essential: {
-    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_MONTHLY || "",
-    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_YEARLY || "",
+    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_MONTHLY || "pri_01m2nag708jv99wfyg5tas9nj7",
+    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_YEARLY || "pri_01m2nak77d41b73gg7edjc6wt5",
   },
   pro: {
-    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || "",
-    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_YEARLY || "",
+    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || "pri_01m2nan6ame0k307m9fy2d18n6",
+    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_YEARLY || "pri_01m2napvxh7jx0qgwsp4myrz08",
   },
 } as const;
 
-export default function SubscriptionPlans({ plan, interval, periodEnd }: Props) {
+export default function SubscriptionPlans({ userId, customerEmail, plan, interval, periodEnd }: Props) {
   const [billing, setBilling] = useState<"month" | "year">(interval === "year" ? "year" : "month");
   const [paddle, setPaddle] = useState<Paddle | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -48,20 +48,17 @@ export default function SubscriptionPlans({ plan, interval, periodEnd }: Props) 
     return () => { cancelled = true; };
   }, []);
 
-  async function checkout(tier: Tier) {
+  function checkout(tier: Tier) {
     setPending(`${tier}-${billing}`); setError(null);
     try {
       if (!paddle) throw new Error("Paddle todavía no está listo. Inténtalo de nuevo en unos segundos.");
-      const response = await fetch("/api/paddle/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: tier, interval: billing }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.transactionId) throw new Error(data.error || "No se pudo iniciar el pago.");
+      const priceId = PRICE_IDS[tier][billing];
+      if (!priceId) throw new Error("El precio de Paddle no está configurado para este plan.");
 
       paddle.Checkout.open({
-        transactionId: data.transactionId,
+        items: [{ priceId, quantity: 1 }],
+        customData: { user_id: userId },
+        ...(customerEmail ? { customer: { email: customerEmail } } : {}),
         settings: {
           displayMode: "overlay",
           theme: "dark",
