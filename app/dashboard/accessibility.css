@@ -63,6 +63,28 @@
 .dashboard-pro-shell .dashboard-footer-trust small,.app-shell .dashboard-footer-trust small{font-size:10px!important;line-height:1.45!important}
 .dashboard-pro-shell .dashboard-disclaimer,.app-shell .dashboard-disclaimer{font-size:11px!important;line-height:1.55!important}
 
+/* Suscripción y configuración: texto funcional siempre legible. */
+.dashboard-pro-shell .settings-card,.app-shell .settings-card{font-size:14px}
+.dashboard-pro-shell .settings-card p,.app-shell .settings-card p{font-size:13px!important;line-height:1.6!important}
+.dashboard-pro-shell .settings-card small,.app-shell .settings-card small{font-size:12px!important;line-height:1.5!important}
+.dashboard-pro-shell .settings-card strong,.app-shell .settings-card strong{line-height:1.4}
+.dashboard-pro-shell .settings-form label,.app-shell .settings-form label{font-size:12px!important}
+.dashboard-pro-shell .settings-form input,.dashboard-pro-shell .settings-form select,.app-shell .settings-form input,.app-shell .settings-form select{font-size:14px!important}
+.dashboard-pro-shell .settings-switch-row,.app-shell .settings-switch-row{font-size:13px}
+.dashboard-pro-shell .settings-action,.app-shell .settings-action{font-size:13px}
+.dashboard-pro-shell .settings-subscription-grid span,.app-shell .settings-subscription-grid span{font-size:11px!important}
+.dashboard-pro-shell .settings-subscription-grid strong,.app-shell .settings-subscription-grid strong{font-size:14px!important}
+.dashboard-pro-shell .settings-subscription-footer,.app-shell .settings-subscription-footer{font-size:12px!important;line-height:1.55!important}
+.dashboard-pro-shell .settings-danger-body span,.app-shell .settings-danger-body span{font-size:12px!important;line-height:1.6!important}
+.dashboard-pro-shell .settings-modal p,.app-shell .settings-modal p{font-size:13px!important;line-height:1.65!important}
+.dashboard-pro-shell .settings-modal input,.app-shell .settings-modal input{font-size:14px!important}
+.dashboard-pro-shell .subscription-page,.app-shell .subscription-page{font-size:15px}
+.dashboard-pro-shell .subscription-page .plan-copy,.app-shell .subscription-page .plan-copy{font-size:13px!important}
+.dashboard-pro-shell .subscription-page .plan-card li,.app-shell .subscription-page .plan-card li{font-size:13px!important;line-height:1.5!important}
+.dashboard-pro-shell .subscription-page .plan-eyebrow,.app-shell .subscription-page .plan-eyebrow{font-size:12px!important}
+.dashboard-pro-shell .subscription-page .plan-current,.app-shell .subscription-page .plan-current{font-size:10px!important}
+.dashboard-pro-shell .subscription-page .plan-button,.app-shell .subscription-page .plan-button{font-size:13px!important}
+
 /* Menú móvil: botón flotante + cajón lateral. La navegación inferior desaparece completamente. */
 .mobile-menu-toggle{display:none}
 .mobile-menu-overlay{display:none}
