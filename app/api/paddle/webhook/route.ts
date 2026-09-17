@@ -1,18 +1,31 @@
 import { NextResponse } from "next/server";
 import { Environment, Paddle } from "@paddle/paddle-node-sdk";
 import {
-  syncPaddleSubscription,
-  syncPaddleSubscriptionById,
-  syncPaddleTransaction,
-} from "@/lib/paddle/server";
+  beginWebhookEvent,
+  finishWebhookEvent,
+  newerSubscriptionEventExists,
+  syncSubscription,
+  syncSubscriptionById,
+  syncTransaction,
+} from "@/lib/paddle/billing";
 
 export const runtime = "nodejs";
 
 function getPaddle() {
-  const apiKey = process.env.PADDLE_API_KEY;
-  if (!apiKey) return null;
-  return new Paddle(apiKey, { environment: Environment.sandbox });
+  const key = process.env.PADDLE_API_KEY;
+  if (!key) return null;
+  return new Paddle(key, { environment: Environment.sandbox });
 }
+
+function text(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function subscriptionIdOf(data: any) { return text(data?.id, data?.subscriptionId, data?.subscription_id) || null; }
+function transactionIdOf(data: any) { return text(data?.id) || null; }
 
 export async function POST(request: Request) {
   const paddle = getPaddle();
@@ -23,34 +36,63 @@ export async function POST(request: Request) {
   if (!paddle || !secret) {
     return NextResponse.json({ error: "Webhook de Paddle no está configurado." }, { status: 500 });
   }
-
   if (!signature) {
     return NextResponse.json({ error: "Falta la firma de Paddle." }, { status: 400 });
   }
 
+  let event: any;
   try {
-    const event = await paddle.webhooks.unmarshal(rawBody, secret, signature);
-    const eventType = String(event.eventType || "");
-    const eventId = String((event as any).eventId || "");
+    event = await paddle.webhooks.unmarshal(rawBody, secret, signature);
+  } catch (error) {
+    console.error("Paddle webhook signature error", error);
+    return NextResponse.json({ error: "Firma de Paddle no válida." }, { status: 400 });
+  }
 
-    console.log("Paddle webhook: evento recibido", {
+  const eventType = text(event?.eventType, event?.event_type) || "unknown";
+  const eventId = text(event?.eventId, event?.event_id)
+    || `${eventType}:${text(event?.data?.id)}:${text(event?.occurredAt, event?.occurred_at)}`;
+  const notificationId = text(event?.notificationId, event?.notification_id) || null;
+  const occurredAt = text(event?.occurredAt, event?.occurred_at) || new Date().toISOString();
+  const data = event?.data || {};
+
+  try {
+    const subscriptionId = subscriptionIdOf(data);
+    const claim = await beginWebhookEvent({
       eventId,
       eventType,
-      occurredAt: (event as any).occurredAt || null,
+      notificationId,
+      subscription: eventType.startsWith("subscription.") ? subscriptionId : text(data?.subscriptionId, data?.subscription_id) || null,
+      occurredAt,
     });
+
+    if (claim.duplicate) {
+      console.log("Paddle webhook: evento duplicado ignorado", { eventId, eventType });
+      return NextResponse.json({ received: true, duplicate: true, eventId, eventType });
+    }
+
+    console.log("Paddle webhook: evento recibido", { eventId, eventType, occurredAt });
+
+    if (eventType.startsWith("subscription.") && subscriptionId) {
+      const newer = await newerSubscriptionEventExists(subscriptionId, occurredAt, eventId);
+      if (newer) {
+        await finishWebhookEvent(eventId, "ignored");
+        console.log("Paddle webhook: evento antiguo ignorado", { eventId, eventType, subscriptionId, occurredAt });
+        return NextResponse.json({ received: true, ignored: true, eventId, eventType });
+      }
+    }
 
     switch (eventType) {
       case "transaction.completed": {
-        const result = await syncPaddleTransaction(event.data, eventType);
-        const subscriptionId = result.subscriptionId;
-        if (subscriptionId) {
-          await syncPaddleSubscriptionById(subscriptionId, `${eventType}:${eventId}`);
+        const result = await syncTransaction(data, `${eventType}:${eventId}`);
+        const txSubscriptionId = result.subscriptionId;
+        if (txSubscriptionId) {
+          await syncSubscriptionById(txSubscriptionId, `${eventType}:${eventId}`, result.userId);
         }
         break;
       }
 
       case "transaction.paid":
-        await syncPaddleTransaction(event.data, eventType);
+        await syncTransaction(data, `${eventType}:${eventId}`);
         break;
 
       case "subscription.created":
@@ -60,23 +102,23 @@ export async function POST(request: Request) {
       case "subscription.paused":
       case "subscription.resumed":
       case "subscription.canceled":
-        await syncPaddleSubscription(event.data, `${eventType}:${eventId}`);
+        await syncSubscription(data, `${eventType}:${eventId}`);
         break;
 
       default:
-        console.log("Paddle webhook: evento ignorado", { eventId, eventType });
+        console.log("Paddle webhook: evento no gestionado", { eventId, eventType });
         break;
     }
 
+    await finishWebhookEvent(eventId, "processed");
     return NextResponse.json({ received: true, eventId, eventType });
   } catch (error) {
-    console.error("Paddle webhook processing error", error);
-
-    // Paddle retries non-2xx deliveries. Returning an error here is intentional:
-    // an event that was received but could not be synchronized must not be lost.
-    return NextResponse.json(
-      { error: "Webhook recibido pero no se pudo procesar correctamente." },
-      { status: 500 },
-    );
+    console.error("Paddle webhook processing error", { eventId, eventType, error });
+    try {
+      await finishWebhookEvent(eventId, "failed", error instanceof Error ? error.message : String(error));
+    } catch (statusError) {
+      console.error("Paddle webhook: no se pudo registrar el fallo", statusError);
+    }
+    return NextResponse.json({ error: "Webhook recibido pero no se pudo procesar correctamente." }, { status: 500 });
   }
 }
