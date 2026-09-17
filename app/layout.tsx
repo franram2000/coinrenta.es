@@ -4,6 +4,7 @@ import "./landing.css";
 import "./cookies.css";
 import "./error-pages.css";
 import "./auth.css";
+import "./site-ui-polish.css";
 import CookieConsent from "@/components/cookie-consent";
 import AnalyticsConsent from "@/components/analytics-consent";
 import LegalQuickLink from "@/components/legal-quick-link";

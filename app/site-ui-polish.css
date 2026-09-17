@@ -1,0 +1,13 @@
+/* Global visual baseline shared by marketing, auth and dashboard-adjacent pages. */
+html, body { font-size: 16px; }
+body { line-height: 1.6; }
+button, input, select, textarea { font-size: 15px; }
+
+[class*="icon"], [class*="-icon"], .brand-mark, .mobile-nav summary, .check, .eyebrow-dot { box-sizing:border-box; }
+.brand-mark, .mobile-nav summary, .check, .feature-icon, .security-check .check { display:grid; place-items:center; line-height:1; }
+.brand-mark::before { display:block; line-height:1; }
+
+@media (max-width:760px) {
+  body { font-size:16px; }
+  .btn { min-height:48px; }
+}

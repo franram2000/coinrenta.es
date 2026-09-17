@@ -17,6 +17,7 @@ import "./settings.css";
 import "./informes/reports.css";
 import "./profile-settings.css";
 import "./ui-polish.css";
+import "./readability-extended.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardSidebar from "./dashboard-sidebar";
