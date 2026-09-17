@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { Environment, Paddle } from "@paddle/paddle-node-sdk";
 import { createClient } from "@/lib/supabase/server";
+import { getPaddlePriceId, type PaddlePlan, type PaddleInterval } from "@/lib/paddle/server";
 
 export const runtime = "nodejs";
-
-const PRICE_KEYS = {
-  essential: { month: "NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_MONTHLY", year: "NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_YEARLY" },
-  pro: { month: "NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY", year: "NEXT_PUBLIC_PADDLE_PRICE_PRO_YEARLY" },
-} as const;
 
 function getPaddle() {
   const apiKey = process.env.PADDLE_API_KEY;
@@ -24,14 +20,13 @@ export async function POST(request: Request) {
   if (!paddle) return NextResponse.json({ error: "Paddle no está configurado todavía." }, { status: 503 });
 
   const body = await request.json().catch(() => null) as { plan?: string; interval?: string } | null;
-  const plan = body?.plan as keyof typeof PRICE_KEYS;
-  const interval = body?.interval as "month" | "year";
-  if (!PRICE_KEYS[plan] || !["month", "year"].includes(interval)) {
+  const plan = body?.plan as PaddlePlan;
+  const interval = body?.interval as PaddleInterval;
+  if (!(["essential", "pro"] as string[]).includes(plan) || !(["month", "year"] as string[]).includes(interval)) {
     return NextResponse.json({ error: "Plan o periodicidad no válidos." }, { status: 400 });
   }
 
-  const priceId = process.env[PRICE_KEYS[plan][interval]];
-  if (!priceId) return NextResponse.json({ error: `Falta configurar el precio de Paddle para ${plan} ${interval}.` }, { status: 503 });
+  const priceId = getPaddlePriceId(plan, interval);
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -40,8 +35,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
-  if (["active", "trialing"].includes(String(profile?.subscription_status))) {
-    return NextResponse.json({ error: "Ya tienes una suscripción activa. Gestiona el cambio desde tu suscripción actual." }, { status: 409 });
+  if (["active", "trialing", "past_due", "paused"].includes(String(profile?.subscription_status))) {
+    return NextResponse.json({
+      error: "Ya tienes una suscripción de Paddle. Usa 'Gestionar suscripción' para cambiar de plan o periodicidad.",
+    }, { status: 409 });
   }
 
   try {
