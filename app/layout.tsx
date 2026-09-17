@@ -27,9 +27,9 @@ export const metadata: Metadata = {
   publisher: "CoinRenta",
   alternates: { canonical: "/" },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
-  openGraph: { type: "website", locale: "es_ES", url: siteUrl, siteName: "CoinRenta", title: siteTitle, description: siteDescription, images: [{ url: "/logo.png", width: 512, height: 512, alt: "CoinRenta — control y fiscalidad de criptomonedas" }] },
-  twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, images: ["/logo.png"] },
-  icons: { icon: [{ url: "/logo.png", type: "image/png", sizes: "any" }], apple: [{ url: "/logo.png", type: "image/png" }] },
+  openGraph: { type: "website", locale: "es_ES", url: siteUrl, siteName: "CoinRenta", title: siteTitle, description: siteDescription, images: [{ url: "/logo.webp", width: 512, height: 512, alt: "CoinRenta — control y fiscalidad de criptomonedas" }] },
+  twitter: { card: "summary_large_image", title: siteTitle, description: siteDescription, images: ["/logo.webp"] },
+  icons: { icon: [{ url: "/logo.webp", type: "image/webp", sizes: "any" }], apple: [{ url: "/logo.webp" }] },
 };
 
 export const viewport: Viewport = { themeColor: "#050812", colorScheme: "dark" };
