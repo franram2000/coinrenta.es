@@ -6,11 +6,11 @@ export default function CoinRentaLogo({ compact = false }: { compact?: boolean }
     <Link className={`coinrenta-logo${compact ? " coinrenta-logo-compact" : ""}`} href="/dashboard" aria-label="CoinRenta">
       <span className="coinrenta-logo-mark" aria-hidden="true">
         <Image
-          src="/logo.png"
+          src="/logo.webp"
           alt=""
           width={44}
           height={44}
-          priority
+          sizes="44px"
         />
       </span>
       {!compact && <span className="coinrenta-logo-text">Coin<span>Renta</span></span>}
