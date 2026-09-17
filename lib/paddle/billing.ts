@@ -53,10 +53,6 @@ function text(...values: unknown[]) {
   return "";
 }
 
-function email(value: unknown) {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
 function customData(entity: any) { return entity?.customData ?? entity?.custom_data ?? null; }
 function customerId(entity: any) { return text(entity?.customerId, entity?.customer_id); }
 function transactionId(entity: any) { return text(entity?.transactionId, entity?.transaction_id); }
@@ -110,21 +106,8 @@ async function profileBy(db: SupabaseAdmin, field: "paddle_customer_id" | "paddl
   return data?.id || "";
 }
 
-async function profileByEmail(db: SupabaseAdmin, value: string) {
-  const normalized = email(value);
-  if (!normalized) return "";
-  const { data, error } = await db.from("profiles").select("id").ilike("email", normalized).maybeSingle();
-  if (error) throw new Error(`Supabase email lookup failed: ${error.message}`);
-  return data?.id || "";
-}
-
 async function getTransaction(id: string) {
   const response = await paddleGet<{ data?: any }>(`/transactions/${encodeURIComponent(id)}?include=customer`);
-  return response.data || null;
-}
-
-async function getCustomer(id: string) {
-  const response = await paddleGet<{ data?: any }>(`/customers/${encodeURIComponent(id)}`);
   return response.data || null;
 }
 
@@ -132,12 +115,10 @@ export async function resolveUser({
   custom,
   customer,
   transaction,
-  customerEmail,
 }: {
   custom?: any;
   customer?: string | null;
   transaction?: string | null;
-  customerEmail?: string | null;
 }) {
   const db = createAdmin();
   const directUser = text(custom?.user_id);
@@ -162,33 +143,11 @@ export async function resolveUser({
       const byCustomer = await profileBy(db, "paddle_customer_id", txCustomer);
       if (byCustomer) return { userId: byCustomer, via: "paddle_customer_id" };
     }
-
-    const txEmail = email(tx?.customer?.email);
-    if (txEmail) {
-      const byEmail = await profileByEmail(db, txEmail);
-      if (byEmail) return { userId: byEmail, via: "transaction.customer.email" };
-    }
   }
 
   if (customer) {
     const stored = await profileBy(db, "paddle_customer_id", customer);
     if (stored) return { userId: stored, via: "paddle_customer_id" };
-
-    try {
-      const customerEntity = await getCustomer(customer);
-      const customerEmailValue = email(customerEntity?.email);
-      if (customerEmailValue) {
-        const byEmail = await profileByEmail(db, customerEmailValue);
-        if (byEmail) return { userId: byEmail, via: "customer.email" };
-      }
-    } catch (error) {
-      console.warn("Paddle: customer lookup no disponible", { customer, error });
-    }
-  }
-
-  if (customerEmail) {
-    const byEmail = await profileByEmail(db, customerEmail);
-    if (byEmail) return { userId: byEmail, via: "email" };
   }
 
   return { userId: "", via: "unresolved" };
@@ -203,7 +162,6 @@ export async function syncTransaction(transaction: any, context: string) {
     custom: customData(transaction),
     customer,
     transaction: id,
-    customerEmail: email(transaction?.customer?.email),
   });
   if (!resolved.userId) throw new Error(`No se pudo resolver el usuario para ${context}: transaction=${id} customer=${customer || ""}`);
 
@@ -265,37 +223,55 @@ export async function syncSubscriptionById(id: string, context: string, forcedUs
   return syncSubscription(response.data, context, forcedUserId);
 }
 
-export async function reconcileSubscription(userId: string, userEmail: string | null) {
-  const normalized = email(userEmail);
-  if (!normalized) throw new Error("No hay email de usuario para reconciliar Paddle.");
-
+export async function reconcileSubscription(userId: string) {
   const db = createAdmin();
-  const customerQuery = new URLSearchParams({ email: normalized, per_page: "20" });
-  const customersResponse = await paddleGet<{ data?: any[] }>(`/customers?${customerQuery.toString()}`);
-  const customers = Array.isArray(customersResponse.data) ? customersResponse.data : [];
-  if (!customers.length) return { found: false as const, reason: "customer_not_found" };
+  const { data: profile, error: profileError } = await db
+    .from("profiles")
+    .select("paddle_customer_id,paddle_subscription_id,subscription_plan,subscription_status")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError) throw new Error(`Supabase reconciliation profile lookup failed: ${profileError.message}`);
+  if (!profile) return { found: false as const, reason: "profile_not_found" };
 
-  const candidates: any[] = [];
-  for (const c of customers) {
-    const cid = text(c?.id);
-    if (!cid) continue;
-    const query = new URLSearchParams({ customer_id: cid, per_page: "200", order_by: "id[DESC]" });
-    const subscriptionsResponse = await paddleGet<{ data?: any[] }>(`/subscriptions?${query.toString()}`);
-    for (const sub of Array.isArray(subscriptionsResponse.data) ? subscriptionsResponse.data : []) candidates.push({ sub, cid });
+  let customerIdValue = text(profile.paddle_customer_id);
+  const storedSubscriptionId = text(profile.paddle_subscription_id);
+
+  if (!customerIdValue && storedSubscriptionId) {
+    const storedSubscription = await paddleGet<{ data?: any }>(`/subscriptions/${encodeURIComponent(storedSubscriptionId)}`);
+    customerIdValue = customerId(storedSubscription.data);
   }
+
+  // A freshly created CoinRenta account must start unlinked. Never recover a
+  // Paddle customer merely because their email matches an older account.
+  if (!customerIdValue) {
+    const { error } = await db.from("profiles").update({
+      paddle_customer_id: null,
+      paddle_subscription_id: null,
+      subscription_plan: "free",
+      subscription_interval: null,
+      subscription_status: null,
+      subscription_current_period_end: null,
+    }).eq("id", userId);
+    if (error) throw new Error(`Supabase reconciliation reset failed: ${error.message}`);
+    return { found: false as const, reason: "profile_not_linked" };
+  }
+
+  const subscriptionsQuery = new URLSearchParams({ customer_id: customerIdValue, per_page: "200", order_by: "id[DESC]" });
+  const subscriptionsResponse = await paddleGet<{ data?: any[] }>(`/subscriptions?${subscriptionsQuery.toString()}`);
+  const candidates = Array.isArray(subscriptionsResponse.data) ? subscriptionsResponse.data : [];
 
   const priority = (value: string) => ({ active: 5, trialing: 4, past_due: 3, paused: 2, canceled: 1 } as Record<string, number>)[value] || 0;
   candidates.sort((a, b) => {
-    const p = priority(status(b.sub)) - priority(status(a.sub));
+    const p = priority(status(b)) - priority(status(a));
     if (p) return p;
-    const at = new Date(text(a.sub?.updated_at, a.sub?.updatedAt)).getTime() || 0;
-    const bt = new Date(text(b.sub?.updated_at, b.sub?.updatedAt)).getTime() || 0;
+    const at = new Date(text(a?.updated_at, a?.updatedAt)).getTime() || 0;
+    const bt = new Date(text(b?.updated_at, b?.updatedAt)).getTime() || 0;
     return bt - at;
   });
 
   if (!candidates.length) {
     const { error } = await db.from("profiles").update({
-      paddle_customer_id: text(customers[0]?.id) || null,
+      paddle_customer_id: customerIdValue,
       paddle_subscription_id: null,
       subscription_plan: "free",
       subscription_interval: null,
@@ -306,7 +282,7 @@ export async function reconcileSubscription(userId: string, userEmail: string | 
     return { found: true as const, subscription: null, plan: "free" as const };
   }
 
-  const selected = candidates[0].sub;
+  const selected = candidates[0];
   const state = subscriptionState(selected);
   if (!state.priceRecognized) {
     throw new Error(`Suscripción de Paddle no pertenece al catálogo CoinRenta: ${state.priceId || "sin price_id"}`);
