@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ReactNode, SVGProps } from "react";
 
 export type UiIconName =
   | "dashboard"
@@ -20,7 +20,7 @@ export type UiIconName =
   | "check"
   | "arrow-right";
 
-const paths: Record<UiIconName, JSX.Element> = {
+const paths: Record<UiIconName, ReactNode> = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
   connections: <><path d="M8 7h8"/><path d="M13 4l3 3-3 3"/><path d="M16 17H8"/><path d="M11 14l-3 3 3 3"/></>,
   movements: <><path d="M5 7h14"/><path d="M5 12h14"/><path d="M5 17h14"/><circle cx="8" cy="7" r="1" fill="currentColor"/><circle cx="16" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="17" r="1" fill="currentColor"/></>,
@@ -42,9 +42,5 @@ const paths: Record<UiIconName, JSX.Element> = {
 };
 
 export default function UiIcon({ name, size = 18, strokeWidth = 1.8, ...props }: SVGProps<SVGSVGElement> & { name: UiIconName; size?: number; strokeWidth?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...props}>
-      {paths[name]}
-    </svg>
-  );
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...props}>{paths[name]}</svg>;
 }
