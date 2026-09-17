@@ -42,9 +42,33 @@ function subscriptionFields(subscription: any) {
   };
 }
 
+async function getCustomerEmail(customerId: string) {
+  const apiKey = process.env.PADDLE_API_KEY;
+  if (!apiKey) return "";
+
+  // Avoid the SDK customer lookup here: the SDK is already able to verify the
+  // webhook signature, but its customer helper is producing an invalid_url error
+  // in this deployment. The Paddle REST endpoint is deterministic.
+  const response = await fetch(`https://sandbox-api.paddle.com/customers/${encodeURIComponent(customerId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Paddle customer lookup failed: ${response.status}`);
+  }
+
+  const body = await response.json();
+  const email = body?.data?.email;
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
 async function findUserId(
   supabase: ReturnType<typeof admin>,
-  paddle: Paddle | null,
   customData: any,
   customerId?: string | null,
   transactionId?: string | null,
@@ -69,33 +93,28 @@ async function findUserId(
       .maybeSingle();
     if (data?.id) return data.id;
 
-    // Paddle subscription events may omit customData. Resolve the account through
-    // the Paddle customer email as a final, deterministic fallback.
-    if (paddle) {
-      try {
-        const customer = await paddle.customers.get(customerId);
-        const email = typeof customer?.email === "string" ? customer.email.trim().toLowerCase() : "";
-        if (email) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .ilike("email", email)
-            .maybeSingle();
-          if (profile?.id) return profile.id;
-        }
-      } catch (error) {
-        console.warn("Paddle webhook: no se pudo resolver el email del cliente", customerId, error);
+    try {
+      const email = await getCustomerEmail(customerId);
+      if (email) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("email", email)
+          .maybeSingle();
+        if (profile?.id) return profile.id;
       }
+    } catch (error) {
+      console.warn("Paddle webhook: no se pudo resolver el email del cliente", customerId, error);
     }
   }
 
   return "";
 }
 
-async function syncSubscription(paddle: Paddle | null, subscription: any) {
+async function syncSubscription(subscription: any) {
   const supabase = admin();
   const transactionId = subscription?.transactionId || subscription?.transaction_id || null;
-  const userId = await findUserId(supabase, paddle, subscription?.customData, subscription?.customerId, transactionId);
+  const userId = await findUserId(supabase, subscription?.customData, subscription?.customerId, transactionId);
   if (!userId) {
     console.warn(
       "Paddle webhook: no se pudo identificar al usuario",
@@ -107,6 +126,16 @@ async function syncSubscription(paddle: Paddle | null, subscription: any) {
   }
 
   const fields = subscriptionFields(subscription);
+  console.log("Paddle webhook: sincronizando suscripción", {
+    userId,
+    subscriptionId: subscription?.id,
+    customerId: subscription?.customerId,
+    priceId: fields.priceId,
+    plan: fields.plan,
+    interval: fields.interval,
+    status: fields.status,
+  });
+
   const { error } = await supabase.from("profiles").update({
     paddle_customer_id: subscription?.customerId || null,
     paddle_subscription_id: fields.status === "canceled" ? null : subscription?.id || null,
@@ -119,9 +148,9 @@ async function syncSubscription(paddle: Paddle | null, subscription: any) {
   if (error) throw new Error(error.message);
 }
 
-async function syncTransaction(paddle: Paddle | null, transaction: any) {
+async function syncTransaction(transaction: any) {
   const supabase = admin();
-  const userId = await findUserId(supabase, paddle, transaction?.customData, transaction?.customerId, transaction?.id);
+  const userId = await findUserId(supabase, transaction?.customData, transaction?.customerId, transaction?.id);
   if (!userId) {
     console.warn("Paddle webhook: no se pudo identificar la transacción", transaction?.id, transaction?.customerId);
     return;
@@ -151,7 +180,7 @@ export async function POST(request: Request) {
     switch (event.eventType) {
       case "transaction.completed":
       case "transaction.paid":
-        await syncTransaction(paddle, event.data);
+        await syncTransaction(event.data);
         break;
       case "subscription.created":
       case "subscription.activated":
@@ -161,7 +190,7 @@ export async function POST(request: Request) {
       case "subscription.paused":
       case "subscription.resumed":
       case "subscription.canceled":
-        await syncSubscription(paddle, event.data);
+        await syncSubscription(event.data);
         break;
       default:
         break;
