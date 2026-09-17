@@ -7,6 +7,7 @@ import {
   syncSubscription,
   syncSubscriptionById,
   syncTransaction,
+  PADDLE_PRICES,
 } from "@/lib/paddle/billing";
 
 export const runtime = "nodejs";
@@ -24,8 +25,28 @@ function text(...values: unknown[]) {
   return "";
 }
 
-function subscriptionIdOf(data: any) { return text(data?.id, data?.subscriptionId, data?.subscription_id) || null; }
-function transactionIdOf(data: any) { return text(data?.id) || null; }
+function subscriptionIdOf(data: any) {
+  return text(data?.id, data?.subscriptionId, data?.subscription_id) || null;
+}
+
+function transactionIdOf(data: any) {
+  return text(data?.id) || null;
+}
+
+function priceIdOfSubscription(data: any) {
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const item = items.find((entry: any) => entry?.recurring !== false) || items[0];
+  return text(item?.price?.id, item?.priceId, item?.price_id) || null;
+}
+
+function isKnownPrice(priceId: string | null) {
+  if (!priceId) return false;
+  return Object.values(PADDLE_PRICES).some((prices) => Object.values(prices).includes(priceId));
+}
+
+function isSimulationEvent(eventId: string) {
+  return eventId.startsWith("ntfsimevt_");
+}
 
 export async function POST(request: Request) {
   const paddle = getPaddle();
@@ -54,6 +75,7 @@ export async function POST(request: Request) {
   const notificationId = text(event?.notificationId, event?.notification_id) || null;
   const occurredAt = text(event?.occurredAt, event?.occurred_at) || new Date().toISOString();
   const data = event?.data || {};
+  const simulation = isSimulationEvent(eventId);
 
   try {
     const subscriptionId = subscriptionIdOf(data);
@@ -61,7 +83,9 @@ export async function POST(request: Request) {
       eventId,
       eventType,
       notificationId,
-      subscription: eventType.startsWith("subscription.") ? subscriptionId : text(data?.subscriptionId, data?.subscription_id) || null,
+      subscription: eventType.startsWith("subscription.")
+        ? subscriptionId
+        : text(data?.subscriptionId, data?.subscription_id) || null,
       occurredAt,
     });
 
@@ -70,7 +94,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, duplicate: true, eventId, eventType });
     }
 
-    console.log("Paddle webhook: evento recibido", { eventId, eventType, occurredAt });
+    console.log("Paddle webhook: evento recibido", { eventId, eventType, occurredAt, simulation });
 
     if (eventType.startsWith("subscription.") && subscriptionId) {
       const newer = await newerSubscriptionEventExists(subscriptionId, occurredAt, eventId);
@@ -81,12 +105,23 @@ export async function POST(request: Request) {
       }
     }
 
+    if (eventType.startsWith("subscription.")) {
+      const priceId = priceIdOfSubscription(data);
+      if (!isKnownPrice(priceId)) {
+        if (simulation) {
+          await finishWebhookEvent(eventId, "ignored", `Simulación demo ignorada: price_id ${priceId || "ausente"} no pertenece al catálogo de CoinRenta.`);
+          console.warn("Paddle webhook: simulación demo ignorada por precio no reconocido", { eventId, eventType, priceId });
+          return NextResponse.json({ received: true, ignored: true, reason: "demo_price_not_mapped", eventId, eventType });
+        }
+        throw new Error(`Precio de Paddle activo no reconocido: ${priceId || "sin price_id"}`);
+      }
+    }
+
     switch (eventType) {
       case "transaction.completed": {
         const result = await syncTransaction(data, `${eventType}:${eventId}`);
-        const txSubscriptionId = result.subscriptionId;
-        if (txSubscriptionId) {
-          await syncSubscriptionById(txSubscriptionId, `${eventType}:${eventId}`, result.userId);
+        if (result.subscriptionId) {
+          await syncSubscriptionById(result.subscriptionId, `${eventType}:${eventId}`, result.userId);
         }
         break;
       }
