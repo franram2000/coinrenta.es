@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CoinRentaLogo from "@/components/coinrenta-logo";
 import SubscriptionPlans from "./subscription-plans-secure";
-import { reconcilePaddleSubscriptionForUser } from "@/lib/paddle/server";
+import { reconcileSubscription } from "@/lib/paddle/billing";
 
 export const metadata: Metadata = { title: "Suscripción", description: "Planes y suscripción de CoinRenta.", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -25,12 +25,12 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     .eq("id", user.id)
     .maybeSingle();
 
-  // The webhook is the primary source of truth, but reconciliation makes the
-  // account self-healing after an interrupted webhook delivery or when a
-  // subscription already exists in Paddle before this integration was fixed.
+  // Paddle webhooks remain the primary synchronization mechanism. This page also
+  // reconciles an existing Paddle customer so accounts self-heal after a missed
+  // webhook or an integration change, without requiring another payment.
   if (success || !profile?.paddle_customer_id || !profile?.paddle_subscription_id) {
     try {
-      await reconcilePaddleSubscriptionForUser(user.id, user.email || null);
+      await reconcileSubscription(user.id, user.email || null);
       const refreshed = await supabase
         .from("profiles")
         .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
