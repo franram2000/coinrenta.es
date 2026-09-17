@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -66,7 +66,11 @@ export async function deleteOwnAccount(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("stripe_customer_id,stripe_subscription_id,subscription_status").eq("id", user.id).maybeSingle();
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id,stripe_subscription_id,subscription_status")
+    .eq("id", user.id)
+    .maybeSingle();
   if (profileError) throw new Error(profileError.message);
 
   const subscriptionId = String(profile?.stripe_subscription_id || "").trim();
@@ -81,8 +85,12 @@ export async function deleteOwnAccount(formData: FormData) {
     if (!response.ok) throw new Error(result?.error?.message || "No se pudo cancelar la suscripción de Stripe. La cuenta no se ha eliminado.");
   }
 
-  const { data: connections, error: connectionsError } = await supabase.from("exchange_connections").select("id,provider_type,api_secret_id").eq("user_id", user.id);
+  const { data: connections, error: connectionsError } = await supabase
+    .from("exchange_connections")
+    .select("id,provider_type,api_secret_id")
+    .eq("user_id", user.id);
   if (connectionsError) throw new Error(connectionsError.message);
+
   for (const connection of connections || []) {
     if (String(connection.provider_type || "") === "api" && connection.api_secret_id) {
       const { error } = await supabase.rpc("delete_exchange_secret", { p_connection_id: connection.id });
@@ -91,25 +99,40 @@ export async function deleteOwnAccount(formData: FormData) {
   }
 
   const accountTables = ["balance_snapshots", "transactions", "imports"];
-  const { data: accounts, error: accountsError } = await supabase.from("accounts").select("id").eq("user_id", user.id);
+  const { data: accounts, error: accountsError } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", user.id);
   if (accountsError) throw new Error(accountsError.message);
+
   const accountIds = (accounts || []).map((account: { id: string }) => account.id);
   if (accountIds.length) {
     for (const table of accountTables) {
-      const { error } = await supabase.from(table).delete().eq("user_id", user.id).in("account_id", accountIds);
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq("user_id", user.id)
+        .in("account_id", accountIds);
       if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
     }
-    const { error } = await supabase.from("accounts").delete().eq("user_id", user.id).in("id", accountIds);
+
+    const { error } = await supabase
+      .from("accounts")
+      .delete()
+      .eq("user_id", user.id)
+      .in("id", accountIds);
     if (error) throw new Error(`No se pudieron eliminar las cuentas: ${error.message}`);
   }
-  const { error: connectionDeleteError } = await supabase.from("exchange_connections").delete().eq("user_id", user.id);
+
+  const { error: connectionDeleteError } = await supabase
+    .from("exchange_connections")
+    .delete()
+    .eq("user_id", user.id);
   if (connectionDeleteError) throw new Error(`No se pudieron eliminar las conexiones: ${connectionDeleteError.message}`);
 
-  const admin = createSupabaseAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false } },
-  );
+  // Use the server-only admin helper so both SUPABASE_SERVICE_ROLE_KEY
+  // and the newer SUPABASE_SECRET_KEY configuration are supported.
+  const admin = createAdminClient();
   const { error: deleteUserError } = await admin.auth.admin.deleteUser(user.id, false);
   if (deleteUserError) throw new Error(`No se pudo eliminar la cuenta de autenticación: ${deleteUserError.message}`);
 
@@ -118,8 +141,7 @@ export async function deleteOwnAccount(formData: FormData) {
 }
 
 export async function adminUpdateUser(formData: FormData) {
-  const { supabase, user } = await requireAdmin();
-  const targetId = String(formData.get("user_id") || "").trim(); const role = String(formData.get("role") || "free").trim(); const isActive = String(formData.get("is_active") || "true") === "true";
+  const { supabase, user } = await requireAdmin(); const targetId = String(formData.get("user_id") || "").trim(); const role = String(formData.get("role") || "free").trim(); const isActive = String(formData.get("is_active") || "true") === "true";
   if (!targetId) throw new Error("Usuario no encontrado"); if (!["free", "pro", "admin"].includes(role)) throw new Error("Plan/rol no válido");
   if (targetId === user.id && (role !== "admin" || !isActive)) throw new Error("No puedes quitarte o desactivar tus propios permisos de administrador.");
   const { data: target, error: targetError } = await supabase.from("profiles").select("id,role,is_active").eq("id", targetId).maybeSingle();
