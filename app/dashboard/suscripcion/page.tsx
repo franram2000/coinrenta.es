@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CoinRentaLogo from "@/components/coinrenta-logo";
-import SubscriptionPlans from "./subscription-plans";
+import SubscriptionPlans from "./subscription-plans-secure";
+import { reconcilePaddleSubscriptionForUser } from "@/lib/paddle/server";
 
 export const metadata: Metadata = { title: "Suscripción", description: "Planes y suscripción de CoinRenta.", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -18,11 +19,28 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
   const params = await searchParams;
   const success = params?.success === "1";
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profiles")
-    .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role")
+    .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
     .eq("id", user.id)
     .maybeSingle();
+
+  // The webhook is the primary source of truth, but reconciliation makes the
+  // account self-healing after an interrupted webhook delivery or when a
+  // subscription already exists in Paddle before this integration was fixed.
+  if (success || !profile?.paddle_customer_id || !profile?.paddle_subscription_id) {
+    try {
+      await reconcilePaddleSubscriptionForUser(user.id, user.email || null);
+      const refreshed = await supabase
+        .from("profiles")
+        .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (refreshed.data) profile = refreshed.data;
+    } catch (error) {
+      console.error("Paddle page reconciliation error", error);
+    }
+  }
 
   const plan = profile?.role === "admin" ? "admin" : (profile?.subscription_plan || "free");
   const paid = plan === "essential" || plan === "pro";
