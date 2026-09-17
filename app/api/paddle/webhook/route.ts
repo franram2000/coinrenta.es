@@ -42,19 +42,47 @@ function subscriptionFields(subscription: any) {
   };
 }
 
-async function findUserId(supabase: ReturnType<typeof admin>, customData: any, customerId?: string | null) {
+async function findUserId(
+  supabase: ReturnType<typeof admin>,
+  customData: any,
+  customerId?: string | null,
+  transactionId?: string | null,
+) {
   const userId = typeof customData?.user_id === "string" ? customData.user_id.trim() : "";
   if (userId) return userId;
-  if (!customerId) return "";
-  const { data } = await supabase.from("profiles").select("id").eq("paddle_customer_id", customerId).maybeSingle();
-  return data?.id || "";
+
+  if (transactionId) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("paddle_transaction_id", transactionId)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+
+  if (customerId) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("paddle_customer_id", customerId)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+
+  return "";
 }
 
 async function syncSubscription(subscription: any) {
   const supabase = admin();
-  const userId = await findUserId(supabase, subscription?.customData, subscription?.customerId);
+  const transactionId = subscription?.transactionId || subscription?.transaction_id || null;
+  const userId = await findUserId(supabase, subscription?.customData, subscription?.customerId, transactionId);
   if (!userId) {
-    console.warn("Paddle webhook: no se pudo identificar al usuario", subscription?.id, subscription?.customerId);
+    console.warn(
+      "Paddle webhook: no se pudo identificar al usuario",
+      subscription?.id,
+      subscription?.customerId,
+      transactionId,
+    );
     return;
   }
 
@@ -73,8 +101,11 @@ async function syncSubscription(subscription: any) {
 
 async function syncTransaction(transaction: any) {
   const supabase = admin();
-  const userId = await findUserId(supabase, transaction?.customData, transaction?.customerId);
-  if (!userId) return;
+  const userId = await findUserId(supabase, transaction?.customData, transaction?.customerId, transaction?.id);
+  if (!userId) {
+    console.warn("Paddle webhook: no se pudo identificar la transacción", transaction?.id, transaction?.customerId);
+    return;
+  }
 
   const { error } = await supabase.from("profiles").update({
     paddle_customer_id: transaction?.customerId || null,
