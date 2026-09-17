@@ -1,0 +1,120 @@
+/* Final readability pass for sections with their own legacy font scales. */
+.dashboard-pro-shell .renta-hero h2 { font-size:28px; }
+.dashboard-pro-shell .renta-hero p,
+.dashboard-pro-shell .renta-valuation-meta { font-size:14px; }
+.dashboard-pro-shell .renta-year-switcher a { font-size:13px; }
+.dashboard-pro-shell .renta-badge { font-size:12px; }
+.dashboard-pro-shell .renta-summary-grid small { font-size:11px; }
+.dashboard-pro-shell .renta-summary-grid strong { font-size:18px; }
+.dashboard-pro-shell .renta-explanation strong { font-size:14px; }
+.dashboard-pro-shell .renta-explanation span,
+.dashboard-pro-shell .renta-note { font-size:12px; }
+.dashboard-pro-shell .renta-table-wrap th { font-size:11px; }
+.dashboard-pro-shell .renta-table-wrap td { font-size:13px; }
+.dashboard-pro-shell .renta-table-wrap td small { font-size:11px; }
+.dashboard-pro-shell .renta-framework-grid strong { font-size:14px; }
+.dashboard-pro-shell .renta-framework-grid span { font-size:12px; }
+.dashboard-pro-shell .renta-framework-grid b { font-size:11px; }
+.dashboard-pro-shell .renta-data-foot { font-size:11px; }
+.dashboard-pro-shell .renta-empty { font-size:12px; }
+.dashboard-pro-shell .renta-ready strong { font-size:13px; }
+.dashboard-pro-shell .renta-ready span { font-size:12px; }
+.dashboard-pro-shell .renta-warning-inline { font-size:11px; }
+.dashboard-pro-shell .renta-provisional strong { font-size:13px; }
+.dashboard-pro-shell .renta-provisional span { font-size:12px; }
+.dashboard-pro-shell .renta-disclaimer strong { font-size:14px; }
+.dashboard-pro-shell .renta-disclaimer p { font-size:12px; }
+.dashboard-pro-shell .quality-group-head h4 { font-size:14px; }
+.dashboard-pro-shell .quality-count { font-size:11px; }
+.dashboard-pro-shell .quality-issue-copy strong { font-size:13px; }
+.dashboard-pro-shell .quality-issue-copy small { font-size:11px; }
+.dashboard-pro-shell .quality-issue-body { font-size:13px; }
+.dashboard-pro-shell .quality-sales-head { font-size:11px; }
+.dashboard-pro-shell .quality-sale-main strong { font-size:13px; }
+.dashboard-pro-shell .quality-sale-main span,
+.dashboard-pro-shell .quality-sale-detail { font-size:11px; }
+.dashboard-pro-shell .quality-action { font-size:11px; }
+.dashboard-pro-shell .quality-help strong { font-size:11px; }
+.dashboard-pro-shell .quality-help span { font-size:11px; }
+.dashboard-pro-shell .quality-pro-locked strong,
+.dashboard-pro-shell .renta-pro-locked strong { font-size:13px; }
+.dashboard-pro-shell .quality-pro-locked span,
+.dashboard-pro-shell .renta-pro-locked span { font-size:11px; }
+
+.dashboard-pro-shell .reports-hero h2 { font-size:32px; }
+.dashboard-pro-shell .reports-hero p { font-size:15px; }
+.dashboard-pro-shell .reports-coverage span { font-size:13px; }
+.dashboard-pro-shell .report-badge { font-size:11px; }
+.dashboard-pro-shell .report-card h3 { font-size:22px; }
+.dashboard-pro-shell .report-card>p { font-size:14px; }
+.dashboard-pro-shell .report-action { font-size:13px; }
+.dashboard-pro-shell .origin-preview>strong { font-size:14px; }
+.dashboard-pro-shell .origin-preview span { font-size:12px; }
+.dashboard-pro-shell .loss-table span { font-size:12px; }
+.dashboard-pro-shell .loss-table strong { font-size:14px; }
+.dashboard-pro-shell .loss-table small { font-size:11px; }
+.dashboard-pro-shell .harvest-controls label { font-size:12px; }
+.dashboard-pro-shell .harvest-total span { font-size:12px; }
+.dashboard-pro-shell .harvest-total strong { font-size:28px; }
+.dashboard-pro-shell .harvest-total small { font-size:11px; }
+.dashboard-pro-shell .nontrans-summary span { font-size:12px; }
+.dashboard-pro-shell .nontrans-list span { font-size:11px; }
+.dashboard-pro-shell .nontrans-list strong { font-size:12px; }
+.dashboard-pro-shell .nontrans-list small { font-size:11px; }
+.dashboard-pro-shell .reports-methodology h3 { font-size:19px; }
+.dashboard-pro-shell .reports-methodology p { font-size:13px; }
+.dashboard-pro-shell .reports-legal-note { font-size:12px; }
+.dashboard-pro-shell .reports-state span { font-size:13px; }
+.dashboard-pro-shell .reports-error { font-size:13px; }
+
+.dashboard-pro-shell .help-section>.panel-head p { font-size:13px; }
+.dashboard-pro-shell .help-guide ol { font-size:13px; }
+.dashboard-pro-shell .help-contact p { font-size:14px; }
+.dashboard-pro-shell .legal-links a { font-size:13px; }
+
+.dashboard-pro-shell .fiscality-summary-item small { font-size:10px; }
+.dashboard-pro-shell .fiscality-summary-item span { font-size:11px; }
+.dashboard-pro-shell .fiscality-page .data-row { font-size:13px; }
+.dashboard-pro-shell .fiscality-note { font-size:11px; }
+
+.dashboard-pro-shell .billing-toggle button { font-size:14px; }
+.dashboard-pro-shell .billing-toggle span { font-size:11px; }
+.dashboard-pro-shell .plan-eyebrow { font-size:13px; }
+.dashboard-pro-shell .plan-current { font-size:11px; }
+.dashboard-pro-shell .plan-copy { font-size:14px; }
+.dashboard-pro-shell .plan-price span { font-size:14px; }
+.dashboard-pro-shell .plan-equivalent { font-size:12px; }
+.dashboard-pro-shell .plan-card li { font-size:14px; }
+.dashboard-pro-shell .plan-card li span { font-size:12px; }
+.dashboard-pro-shell .plan-button { font-size:14px; }
+.dashboard-pro-shell .subscription-period,
+.dashboard-pro-shell .subscription-management-hint { font-size:13px; }
+
+/* Ensure icon boxes do not inherit text metrics that can visually shift SVGs. */
+.dashboard-pro-shell .report-icon,
+.dashboard-pro-shell .help-guide-icon,
+.dashboard-pro-shell .quality-icon,
+.dashboard-pro-shell .settings-info-icon,
+.dashboard-pro-shell .settings-hero-icon,
+.dashboard-pro-shell .profile-avatar,
+.dashboard-pro-shell .profile-plan-icon,
+.dashboard-pro-shell .profile-action-icon,
+.dashboard-pro-shell .profile-danger-icon { line-height:0; }
+.dashboard-pro-shell .report-icon svg,
+.dashboard-pro-shell .help-guide-icon svg,
+.dashboard-pro-shell .quality-icon svg,
+.dashboard-pro-shell .settings-info-icon svg,
+.dashboard-pro-shell .settings-hero-icon svg,
+.dashboard-pro-shell .profile-plan-icon svg,
+.dashboard-pro-shell .profile-action-icon svg,
+.dashboard-pro-shell .profile-danger-icon svg { margin:0; }
+
+@media(max-width:760px){
+  .dashboard-pro-shell .renta-hero h2 { font-size:22px; }
+  .dashboard-pro-shell .renta-hero p { font-size:13px; }
+  .dashboard-pro-shell .renta-table-wrap td { font-size:12px; }
+  .dashboard-pro-shell .reports-hero h2 { font-size:28px; }
+  .dashboard-pro-shell .reports-hero p { font-size:14px; }
+  .dashboard-pro-shell .plan-copy,
+  .dashboard-pro-shell .plan-card li { font-size:14px; }
+}
