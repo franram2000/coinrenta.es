@@ -23,7 +23,7 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  try { await reconcileSubscription(user.id, user.email || null); } catch (error) { console.error("Paddle profile reconciliation error", error); }
+  try { await reconcileSubscription(user.id); } catch (error) { console.error("Paddle profile reconciliation error", error); }
 
   const { data: profileData, error } = await supabase.from("profiles").select("display_name,country_code,timezone,role,subscription_plan,subscription_interval,subscription_status,subscription_current_period_end").eq("id", user.id).maybeSingle();
   if (error) throw new Error(error.message);
