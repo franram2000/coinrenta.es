@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Environment, Paddle } from "@paddle/paddle-node-sdk";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -68,21 +69,39 @@ export async function deleteOwnAccount(formData: FormData) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("stripe_customer_id,stripe_subscription_id,subscription_status")
+    .select("stripe_customer_id,stripe_subscription_id,paddle_customer_id,paddle_subscription_id,subscription_status")
     .eq("id", user.id)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
 
-  const subscriptionId = String(profile?.stripe_subscription_id || "").trim();
+  // Never delete an account while an active recurring payment can remain behind.
+  const stripeSubscriptionId = String(profile?.stripe_subscription_id || "").trim();
   const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
-  if (subscriptionId && stripeSecret && ["active", "trialing", "past_due", "unpaid"].includes(String(profile?.subscription_status || ""))) {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+  const subscriptionStatus = String(profile?.subscription_status || "");
+  if (stripeSubscriptionId && ["active", "trialing", "past_due", "unpaid"].includes(subscriptionStatus)) {
+    if (!stripeSecret) throw new Error("No se puede eliminar la cuenta porque Stripe no está configurado para cancelar la suscripción automáticamente.");
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(stripeSubscriptionId)}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${stripeSecret}` },
       cache: "no-store",
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error?.message || "No se pudo cancelar la suscripción de Stripe. La cuenta no se ha eliminado.");
+  }
+
+  // CoinRenta's current billing integration is Paddle Billing. Cancel immediately
+  // before deleting user data, so account deletion cannot leave billing active.
+  const paddleSubscriptionId = String(profile?.paddle_subscription_id || "").trim();
+  if (paddleSubscriptionId && ["active", "trialing", "past_due", "paused"].includes(subscriptionStatus)) {
+    const paddleKey = process.env.PADDLE_API_KEY || "";
+    if (!paddleKey) throw new Error("No se puede eliminar la cuenta porque Paddle no está configurado para cancelar la suscripción automáticamente.");
+
+    const paddle = new Paddle(paddleKey, { environment: Environment.sandbox });
+    try {
+      await paddle.subscriptions.cancel(paddleSubscriptionId, { effectiveFrom: "immediately" });
+    } catch (error) {
+      throw new Error(`No se pudo cancelar la suscripción de Paddle. La cuenta no se ha eliminado. ${error instanceof Error ? error.message : ""}`.trim());
+    }
   }
 
   const { data: connections, error: connectionsError } = await supabase
@@ -130,8 +149,6 @@ export async function deleteOwnAccount(formData: FormData) {
     .eq("user_id", user.id);
   if (connectionDeleteError) throw new Error(`No se pudieron eliminar las conexiones: ${connectionDeleteError.message}`);
 
-  // Use the server-only admin helper so both SUPABASE_SERVICE_ROLE_KEY
-  // and the newer SUPABASE_SECRET_KEY configuration are supported.
   const admin = createAdminClient();
   const { error: deleteUserError } = await admin.auth.admin.deleteUser(user.id, false);
   if (deleteUserError) throw new Error(`No se pudo eliminar la cuenta de autenticación: ${deleteUserError.message}`);
