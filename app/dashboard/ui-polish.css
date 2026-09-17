@@ -121,6 +121,22 @@ html[data-ui-density="compact"] .dashboard-pro-shell .profile-card,
 html[data-ui-density="compact"] .dashboard-pro-shell .settings-card { padding:18px; }
 html[data-ui-density="compact"] .dashboard-pro-shell .dashboard-modern-content { padding-top:22px; }
 html[data-ui-density="compact"] .dashboard-pro-shell .summary-page { padding-top:22px !important; }
+html[data-ui-large-text="on"] .dashboard-pro-shell { font-size:16px !important; }
+html[data-ui-large-text="on"] .dashboard-pro-shell .app-nav-item { font-size:16px; }
+html[data-ui-large-text="on"] .dashboard-pro-shell .app-topbar p,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-top p,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-hero-copy,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-status p,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-panel-copy,
+html[data-ui-large-text="on"] .dashboard-pro-shell .exchange-hero-copy p { font-size:15px; }
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-table td,
+html[data-ui-large-text="on"] .dashboard-pro-shell .exchange-table-row { font-size:14px; }
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-table td span,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-table th,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-kpi-label,
+html[data-ui-large-text="on"] .dashboard-pro-shell .summary-kpi-note { font-size:12px; }
+html[data-ui-large-text="on"] .dashboard-pro-shell .recent-row small,
+html[data-ui-large-text="on"] .dashboard-pro-shell .exchange-name small { font-size:12px; }
 
 @media (max-width:760px) {
   .dashboard-pro-shell .app-topbar { padding:20px 14px 12px; }
@@ -134,4 +150,9 @@ html[data-ui-density="compact"] .dashboard-pro-shell .summary-page { padding-top
   .dashboard-pro-shell .summary-hero h2 { font-size:24px; }
   .dashboard-pro-shell .summary-kpi-value { font-size:21px; }
   .dashboard-pro-shell .summary-table td { font-size:12px; }
+  html[data-ui-large-text="on"] .dashboard-pro-shell .app-nav-item { font-size:11px; }
+  html[data-ui-large-text="on"] .dashboard-pro-shell .app-topbar p,
+  html[data-ui-large-text="on"] .dashboard-pro-shell .summary-top p,
+  html[data-ui-large-text="on"] .dashboard-pro-shell .summary-hero-copy { font-size:14px; }
+  html[data-ui-large-text="on"] .dashboard-pro-shell .summary-table td { font-size:13px; }
 }
