@@ -62,8 +62,6 @@ function customerId(entity: any) { return text(entity?.customerId, entity?.custo
 function transactionId(entity: any) { return text(entity?.transactionId, entity?.transaction_id); }
 function subscriptionId(entity: any) { return text(entity?.subscriptionId, entity?.subscription_id); }
 function status(entity: any) { return text(entity?.status); }
-function eventOccurredAt(event: any) { return text(event?.occurredAt, event?.occurred_at) || new Date().toISOString(); }
-
 function priceId(item: any) { return text(item?.price?.id, item?.priceId, item?.price_id); }
 function priceInterval(item: any): PaddleInterval | null {
   const value = text(item?.price?.billingCycle?.interval, item?.price?.billing_cycle?.interval, item?.billingCycle?.interval, item?.billing_cycle?.interval);
@@ -80,18 +78,15 @@ function planFromPrice(id: string) {
 }
 
 function subscriptionState(subscription: any) {
-  const item = (Array.isArray(subscription?.items) ? subscription.items : []).find((entry: any) => entry?.recurring !== false)
-    || (Array.isArray(subscription?.items) ? subscription.items[0] : null);
+  const items = Array.isArray(subscription?.items) ? subscription.items : [];
+  const item = items.find((entry: any) => entry?.recurring !== false) || items[0] || null;
   const id = item ? priceId(item) : "";
   const mapped = planFromPrice(id);
   const currentStatus = status(subscription);
   const interval = mapped?.interval || priceInterval(item);
-  if (ACCESS_STATUSES.has(currentStatus) && !mapped) {
-    throw new Error(`Precio de Paddle activo no reconocido: ${id || "sin price_id"}`);
-  }
   const periodEnd = text(subscription?.currentBillingPeriod?.endsAt, subscription?.current_billing_period?.ends_at) || null;
   return {
-    plan: ACCESS_STATUSES.has(currentStatus) && mapped ? mapped.plan : "free",
+    plan: ACCESS_STATUSES.has(currentStatus) && mapped ? mapped.plan : null,
     interval: ACCESS_STATUSES.has(currentStatus) && mapped ? interval : null,
     status: currentStatus || "canceled",
     periodEnd,
@@ -99,6 +94,7 @@ function subscriptionState(subscription: any) {
     customerId: customerId(subscription) || null,
     subscriptionId: text(subscription?.id) || null,
     transactionId: transactionId(subscription) || null,
+    priceRecognized: Boolean(mapped),
   };
 }
 
@@ -178,11 +174,15 @@ export async function resolveUser({
     const stored = await profileBy(db, "paddle_customer_id", customer);
     if (stored) return { userId: stored, via: "paddle_customer_id" };
 
-    const customerEntity = await getCustomer(customer);
-    const customerEmailValue = email(customerEntity?.email);
-    if (customerEmailValue) {
-      const byEmail = await profileByEmail(db, customerEmailValue);
-      if (byEmail) return { userId: byEmail, via: "customer.email" };
+    try {
+      const customerEntity = await getCustomer(customer);
+      const customerEmailValue = email(customerEntity?.email);
+      if (customerEmailValue) {
+        const byEmail = await profileByEmail(db, customerEmailValue);
+        if (byEmail) return { userId: byEmail, via: "customer.email" };
+      }
+    } catch (error) {
+      console.warn("Paddle: customer lookup no disponible", { customer, error });
     }
   }
 
@@ -220,6 +220,10 @@ export async function syncTransaction(transaction: any, context: string) {
 
 export async function syncSubscription(subscription: any, context: string, forcedUserId?: string) {
   const state = subscriptionState(subscription);
+  if (!state.priceRecognized) {
+    throw new Error(`Precio de Paddle activo no reconocido: ${state.priceId || "sin price_id"}`);
+  }
+
   const resolved = forcedUserId
     ? { userId: await profileById(createAdmin(), forcedUserId), via: "reconciliation" }
     : await resolveUser({ custom: customData(subscription), customer: state.customerId, transaction: state.transactionId });
@@ -229,7 +233,7 @@ export async function syncSubscription(subscription: any, context: string, force
   const update: Record<string, any> = {
     paddle_customer_id: state.customerId,
     paddle_subscription_id: state.status === "canceled" ? null : state.subscriptionId,
-    subscription_plan: state.plan,
+    subscription_plan: state.plan || "free",
     subscription_interval: state.interval,
     subscription_status: state.status,
     subscription_current_period_end: state.periodEnd,
@@ -304,6 +308,9 @@ export async function reconcileSubscription(userId: string, userEmail: string | 
 
   const selected = candidates[0].sub;
   const state = subscriptionState(selected);
+  if (!state.priceRecognized) {
+    throw new Error(`Suscripción de Paddle no pertenece al catálogo CoinRenta: ${state.priceId || "sin price_id"}`);
+  }
   await syncSubscription(selected, "account_reconciliation", userId);
   return { found: true as const, subscription: state.subscriptionId, plan: state.plan, status: state.status, priceId: state.priceId };
 }
