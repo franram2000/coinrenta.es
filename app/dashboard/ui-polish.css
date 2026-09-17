@@ -1,0 +1,137 @@
+/* Visual consistency layer: intentionally loaded after the dashboard feature styles. */
+.dashboard-pro-shell,
+.dashboard-pro-shell button,
+.dashboard-pro-shell input,
+.dashboard-pro-shell select,
+.dashboard-pro-shell textarea { font-size: 15px; }
+
+.dashboard-pro-shell svg { display:block; flex:0 0 auto; }
+.dashboard-pro-shell [class*="icon"],
+.dashboard-pro-shell .nav-icon,
+.dashboard-pro-shell .exchange-arrow,
+.dashboard-pro-shell .mobile-menu-close { display:grid; place-items:center; line-height:1; }
+.dashboard-pro-shell .app-nav-item { min-height:48px; font-size:15px; line-height:1.25; }
+.dashboard-pro-shell .app-nav-item .nav-icon { width:24px; min-width:24px; height:24px; }
+.dashboard-pro-shell .sidebar-nav-label { font-size:11px; }
+.dashboard-pro-shell .app-topbar { padding:28px 32px 18px; }
+.dashboard-pro-shell .app-topbar h1 { font-size:clamp(32px,3.8vw,42px); line-height:1.08; }
+.dashboard-pro-shell .app-topbar p { font-size:15px; line-height:1.6; }
+.dashboard-pro-shell .section-kicker,
+.dashboard-pro-shell .topbar-kicker { font-size:12px; }
+.dashboard-pro-shell .panel-head h3 { font-size:18px; }
+.dashboard-pro-shell .panel-head p,
+.dashboard-pro-shell .panel-link { font-size:13px; }
+.dashboard-pro-shell .stat-card-modern .stat-label { font-size:13px; }
+.dashboard-pro-shell .stat-card-modern strong { font-size:25px; }
+.dashboard-pro-shell .stat-card-modern .stat-note { font-size:12px; line-height:1.4; }
+.dashboard-pro-shell .chart-y-labels,
+.dashboard-pro-shell .chart-x-labels { font-size:11px; }
+.dashboard-pro-shell .exchange-table-head { font-size:11px; }
+.dashboard-pro-shell .exchange-table-row { font-size:13px; }
+.dashboard-pro-shell .exchange-name small { font-size:11px; }
+.dashboard-pro-shell .pro-summary-heading strong { font-size:15px; }
+.dashboard-pro-shell .pro-summary-heading span { font-size:11px; }
+.dashboard-pro-shell .pro-summary-card li { font-size:13px; }
+.dashboard-pro-shell .quick-grid span { font-size:11px; }
+.dashboard-pro-shell .recent-row strong { font-size:13px; }
+.dashboard-pro-shell .recent-row small { font-size:11px; }
+.dashboard-pro-shell .dashboard-footer-trust strong { font-size:11px; }
+.dashboard-pro-shell .dashboard-footer-trust small { font-size:10px; }
+.dashboard-pro-shell .dashboard-disclaimer { font-size:11px; line-height:1.5; }
+
+/* Summary */
+.dashboard-pro-shell .summary-top h1 { font-size:clamp(34px,4.2vw,48px); }
+.dashboard-pro-shell .summary-top p { font-size:14px; }
+.dashboard-pro-shell .summary-eyebrow,
+.dashboard-pro-shell .summary-kicker,
+.dashboard-pro-shell .summary-panel-kicker { font-size:11px; }
+.dashboard-pro-shell .summary-top-link,
+.dashboard-pro-shell .summary-head-link { font-size:12px; }
+.dashboard-pro-shell .summary-plan { font-size:10px; }
+.dashboard-pro-shell .summary-hero-copy { font-size:14px; line-height:1.7; }
+.dashboard-pro-shell .summary-hero h2 { font-size:28px; }
+.dashboard-pro-shell .summary-result-label { font-size:12px; }
+.dashboard-pro-shell .summary-chip { font-size:12px; }
+.dashboard-pro-shell .summary-status-title { font-size:14px; }
+.dashboard-pro-shell .summary-status-badge { font-size:10px; }
+.dashboard-pro-shell .summary-status p { font-size:12px; }
+.dashboard-pro-shell .summary-status-note { font-size:11px; }
+.dashboard-pro-shell .summary-kpi-label { font-size:11px; }
+.dashboard-pro-shell .summary-kpi-value { font-size:24px; }
+.dashboard-pro-shell .summary-kpi-note { font-size:11px; }
+.dashboard-pro-shell .summary-panel h3 { font-size:18px; }
+.dashboard-pro-shell .summary-panel-copy { font-size:12px; }
+.dashboard-pro-shell .summary-mini-row span,
+.dashboard-pro-shell .summary-mini-row strong { font-size:13px; }
+.dashboard-pro-shell .summary-tag { font-size:10px; }
+.dashboard-pro-shell .summary-table th { font-size:11px; }
+.dashboard-pro-shell .summary-table td { font-size:13px; }
+.dashboard-pro-shell .summary-table td strong { font-size:13px; }
+.dashboard-pro-shell .summary-table td span { font-size:11px; }
+.dashboard-pro-shell .summary-type { font-size:10px; }
+.dashboard-pro-shell .summary-empty,
+.dashboard-pro-shell .dashboard-summary-empty { font-size:13px; }
+.dashboard-pro-shell .summary-empty strong,
+.dashboard-pro-shell .dashboard-summary-empty strong { font-size:15px; }
+.dashboard-pro-shell .summary-alert strong { font-size:13px; }
+.dashboard-pro-shell .summary-alert span { font-size:12px; line-height:1.6; }
+.dashboard-pro-shell .summary-privacy-copy strong { font-size:13px; }
+.dashboard-pro-shell .summary-privacy-copy span { font-size:12px; }
+
+/* Connection pages */
+.dashboard-pro-shell .exchange-hero-copy h3 { font-size:25px; }
+.dashboard-pro-shell .exchange-hero-copy p { font-size:14px; line-height:1.7; }
+.dashboard-pro-shell .exchange-card-copy strong { font-size:15px; }
+.dashboard-pro-shell .exchange-card-copy small,
+.dashboard-pro-shell .exchange-card-api-disabled b { font-size:12px; }
+.dashboard-pro-shell .exchange-method-card strong,
+.dashboard-pro-shell .exchange-api-locked strong { font-size:15px; }
+.dashboard-pro-shell .exchange-method-card small,
+.dashboard-pro-shell .exchange-api-locked small,
+.dashboard-pro-shell .form-help { font-size:12px; line-height:1.55; }
+.dashboard-pro-shell .connection-status,
+.dashboard-pro-shell .exchange-locked-badge { font-size:11px; }
+
+/* Forms and shared content */
+.dashboard-pro-shell label { font-size:13px; }
+.dashboard-pro-shell input,
+.dashboard-pro-shell select,
+.dashboard-pro-shell textarea { min-height:48px; font-size:15px; }
+.dashboard-pro-shell .btn { font-size:15px; min-height:46px; }
+.dashboard-pro-shell small { line-height:1.5; }
+
+/* Icon containers are always centered on both axes. */
+.dashboard-pro-shell .subscription-icon,
+.dashboard-pro-shell .modern-stat-icon,
+.dashboard-pro-shell .feature-icon,
+.dashboard-pro-shell .pro-summary-icon,
+.dashboard-pro-shell .recent-icon,
+.dashboard-pro-shell .summary-alert-icon,
+.dashboard-pro-shell .summary-privacy-icon,
+.dashboard-pro-shell .exchange-logo,
+.dashboard-pro-shell .exchange-method-icon,
+.dashboard-pro-shell .connected-exchange-logo { line-height:1; place-items:center; }
+
+/* Local settings */
+html[data-ui-animations="off"] .dashboard-pro-shell *,
+html[data-ui-animations="off"] .dashboard-pro-shell *::before,
+html[data-ui-animations="off"] .dashboard-pro-shell *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+html[data-ui-density="compact"] .dashboard-pro-shell .panel-card,
+html[data-ui-density="compact"] .dashboard-pro-shell .profile-card,
+html[data-ui-density="compact"] .dashboard-pro-shell .settings-card { padding:18px; }
+html[data-ui-density="compact"] .dashboard-pro-shell .dashboard-modern-content { padding-top:22px; }
+html[data-ui-density="compact"] .dashboard-pro-shell .summary-page { padding-top:22px !important; }
+
+@media (max-width:760px) {
+  .dashboard-pro-shell .app-topbar { padding:20px 14px 12px; }
+  .dashboard-pro-shell .app-topbar h1 { font-size:30px; }
+  .dashboard-pro-shell .app-topbar p { font-size:14px; }
+  .dashboard-pro-shell .app-nav-item { font-size:10px; }
+  .dashboard-pro-shell .app-nav-item .nav-icon { width:22px; min-width:22px; height:22px; }
+  .dashboard-pro-shell .summary-top h1 { font-size:32px; }
+  .dashboard-pro-shell .summary-top p { font-size:13px; }
+  .dashboard-pro-shell .summary-hero-copy { font-size:13px; }
+  .dashboard-pro-shell .summary-hero h2 { font-size:24px; }
+  .dashboard-pro-shell .summary-kpi-value { font-size:21px; }
+  .dashboard-pro-shell .summary-table td { font-size:12px; }
+}
