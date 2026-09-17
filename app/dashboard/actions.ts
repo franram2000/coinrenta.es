@@ -69,29 +69,15 @@ export async function deleteOwnAccount(formData: FormData) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("stripe_customer_id,stripe_subscription_id,paddle_customer_id,paddle_subscription_id,subscription_status")
+    .select("paddle_subscription_id,subscription_status")
     .eq("id", user.id)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
 
-  // Never delete an account while an active recurring payment can remain behind.
-  const stripeSubscriptionId = String(profile?.stripe_subscription_id || "").trim();
-  const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
-  const subscriptionStatus = String(profile?.subscription_status || "");
-  if (stripeSubscriptionId && ["active", "trialing", "past_due", "unpaid"].includes(subscriptionStatus)) {
-    if (!stripeSecret) throw new Error("No se puede eliminar la cuenta porque Stripe no está configurado para cancelar la suscripción automáticamente.");
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(stripeSubscriptionId)}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${stripeSecret}` },
-      cache: "no-store",
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(result?.error?.message || "No se pudo cancelar la suscripción de Stripe. La cuenta no se ha eliminado.");
-  }
-
-  // CoinRenta's current billing integration is Paddle Billing. Cancel immediately
-  // before deleting user data, so account deletion cannot leave billing active.
+  // Paddle is the only billing provider used by CoinRenta. Cancel immediately
+  // before deleting user data so account deletion can never leave billing active.
   const paddleSubscriptionId = String(profile?.paddle_subscription_id || "").trim();
+  const subscriptionStatus = String(profile?.subscription_status || "");
   if (paddleSubscriptionId && ["active", "trialing", "past_due", "paused"].includes(subscriptionStatus)) {
     const paddleKey = process.env.PADDLE_API_KEY || "";
     if (!paddleKey) throw new Error("No se puede eliminar la cuenta porque Paddle no está configurado para cancelar la suscripción automáticamente.");
