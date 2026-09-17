@@ -15,6 +15,8 @@ import "./workspace-loading.css";
 import "./suscripcion/subscription.css";
 import "./settings.css";
 import "./informes/reports.css";
+import "./profile-settings.css";
+import "./ui-polish.css";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardSidebar from "./dashboard-sidebar";
