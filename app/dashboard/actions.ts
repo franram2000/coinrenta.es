@@ -84,6 +84,13 @@ export async function deleteOwnAccount(formData: FormData) {
 
     const paddle = new Paddle(paddleKey, { environment: Environment.sandbox });
     try {
+      // A subscription with a pending scheduled change is locked for other
+      // changes. Paddle requires the scheduled change to be cleared first.
+      const subscription = await paddle.subscriptions.get(paddleSubscriptionId);
+      if (subscription?.scheduledChange) {
+        await paddle.subscriptions.update(paddleSubscriptionId, { scheduledChange: null });
+      }
+
       await paddle.subscriptions.cancel(paddleSubscriptionId, { effectiveFrom: "immediately" });
     } catch (error) {
       throw new Error(`No se pudo cancelar la suscripción de Paddle. La cuenta no se ha eliminado. ${error instanceof Error ? error.message : ""}`.trim());
