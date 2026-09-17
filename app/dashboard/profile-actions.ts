@@ -7,17 +7,42 @@ import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 function paddleBase() { return process.env.PADDLE_API_BASE_URL || "https://sandbox-api.paddle.com"; }
 
-async function paddleCancelSubscription(subscriptionId: string) {
+async function paddleRequest(path: string, init: RequestInit = {}) {
   const key = process.env.PADDLE_API_KEY;
   if (!key) throw new Error("No está configurado el acceso de Paddle para cancelar la suscripción.");
-  const response = await fetch(`${paddleBase()}/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ effective_from: "next_billing_period" }),
+  const response = await fetch(`${paddleBase()}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init.headers || {}),
+    },
     cache: "no-store",
   });
   const result = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(result?.error?.detail || result?.error?.message || "No se pudo cancelar la suscripción de Paddle.");
+  if (!response.ok) {
+    throw new Error(result?.error?.detail || result?.error?.message || `Paddle devolvió HTTP ${response.status}.`);
+  }
+  return result;
+}
+
+async function paddleCancelSubscription(subscriptionId: string) {
+  const encodedId = encodeURIComponent(subscriptionId);
+  const current = await paddleRequest(`/subscriptions/${encodedId}`);
+  const scheduledChange = current?.data?.scheduled_change ?? current?.data?.scheduledChange ?? null;
+
+  if (scheduledChange) {
+    await paddleRequest(`/subscriptions/${encodedId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ scheduled_change: null }),
+    });
+  }
+
+  await paddleRequest(`/subscriptions/${encodedId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ effective_from: "immediately" }),
+  });
 }
 
 export async function updateProfile(formData: FormData) {
@@ -45,21 +70,17 @@ export async function deleteOwnAccount(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("paddle_subscription_id,stripe_subscription_id,subscription_status").eq("id", user.id).maybeSingle();
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("paddle_subscription_id,subscription_status").eq("id", user.id).maybeSingle();
   if (profileError) throw new Error(profileError.message);
 
   const status = String(profile?.subscription_status || "");
-  const activeStates = ["active", "trialing", "past_due", "unpaid", "paused"];
+  const activeStates = ["active", "trialing", "paused"];
   if (profile?.paddle_subscription_id && activeStates.includes(status)) {
-    await paddleCancelSubscription(String(profile.paddle_subscription_id));
-  }
-
-  const stripeSubscriptionId = String(profile?.stripe_subscription_id || "").trim();
-  const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
-  if (stripeSubscriptionId && stripeSecret && activeStates.includes(status)) {
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(stripeSubscriptionId)}`, { method: "DELETE", headers: { Authorization: `Bearer ${stripeSecret}` }, cache: "no-store" });
-    const result = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(result?.error?.message || "No se pudo cancelar la suscripción de Stripe. La cuenta no se ha eliminado.");
+    try {
+      await paddleCancelSubscription(String(profile.paddle_subscription_id));
+    } catch (error) {
+      throw new Error(`No se pudo cancelar la suscripción de Paddle. La cuenta no se ha eliminado. ${error instanceof Error ? error.message : ""}`.trim());
+    }
   }
 
   const { data: connections, error: connectionsError } = await supabase.from("exchange_connections").select("id,provider_type,api_secret_id").eq("user_id", user.id);
