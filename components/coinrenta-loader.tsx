@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const MESSAGES = ["Preparando tu espacio fiscal","Cargando tu histórico","Verificando movimientos","Calculando resultados"];
@@ -31,6 +32,6 @@ export default function CoinRentaLoader({ duration = 3000, onComplete, contained
       @media(max-width:600px){.coinrenta-loader-card{padding:32px 20px 26px;border-radius:23px}.coinrenta-loader-brand{font-size:28px}.coinrenta-loader-logo-wrap{width:100px;height:100px}.coinrenta-loader-logo{width:76px;height:76px}.coinrenta-loader-orbit{width:94vw;height:94vw}.coinrenta-loader-particle{display:none}}@media(prefers-reduced-motion:reduce){.coinrenta-loader,.coinrenta-loader::before,.coinrenta-loader::after,.coinrenta-loader-orbit,.coinrenta-loader-orbit::before,.coinrenta-loader-orbit::after,.coinrenta-loader-particle,.coinrenta-loader-card,.coinrenta-loader-logo-wrap::before,.coinrenta-loader-ring,.coinrenta-loader-logo,.coinrenta-loader-track::before,.coinrenta-loader-track::after,.coinrenta-loader-dot{animation:none!important}}
     `}</style>
     <div className="coinrenta-loader-orbit" aria-hidden="true"/><span className="coinrenta-loader-particle a" aria-hidden="true"/><span className="coinrenta-loader-particle b" aria-hidden="true"/><span className="coinrenta-loader-particle c" aria-hidden="true"/><span className="coinrenta-loader-particle d" aria-hidden="true"/>
-    <section className="coinrenta-loader-card"><div className="coinrenta-loader-logo-wrap" aria-hidden="true"><span className="coinrenta-loader-ring"/><span className="coinrenta-loader-ring two"/><img src="/logo.png" alt="" className="coinrenta-loader-logo"/></div><h1 className="coinrenta-loader-brand"><span className="coin">Coin</span><span className="renta">Renta</span></h1><p className="coinrenta-loader-tagline">Tu información fiscal, bajo control</p><div className="coinrenta-loader-track" aria-hidden="true"/><div className="coinrenta-loader-status"><span className="coinrenta-loader-dot"/>{MESSAGES[messageIndex]}</div><div className="coinrenta-loader-meta">Estamos preparando CoinRenta para ti</div></section>
+    <section className="coinrenta-loader-card"><div className="coinrenta-loader-logo-wrap" aria-hidden="true"><span className="coinrenta-loader-ring"/><span className="coinrenta-loader-ring two"/><Image src="/logo.webp" alt="" width={90} height={90} priority sizes="90px" className="coinrenta-loader-logo"/></div><h1 className="coinrenta-loader-brand"><span className="coin">Coin</span><span className="renta">Renta</span></h1><p className="coinrenta-loader-tagline">Tu información fiscal, bajo control</p><div className="coinrenta-loader-track" aria-hidden="true"/><div className="coinrenta-loader-status"><span className="coinrenta-loader-dot"/>{MESSAGES[messageIndex]}</div><div className="coinrenta-loader-meta">Estamos preparando CoinRenta para ti</div></section>
   </div>;
 }
