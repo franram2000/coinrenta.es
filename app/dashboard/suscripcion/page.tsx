@@ -25,21 +25,19 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     .eq("id", user.id)
     .maybeSingle();
 
-  // Paddle webhooks remain the primary synchronization mechanism. This page also
-  // reconciles an existing Paddle customer so accounts self-heal after a missed
-  // webhook or an integration change, without requiring another payment.
-  if (success || !profile?.paddle_customer_id || !profile?.paddle_subscription_id) {
-    try {
-      await reconcileSubscription(user.id, user.email || null);
-      const refreshed = await supabase
-        .from("profiles")
-        .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (refreshed.data) profile = refreshed.data;
-    } catch (error) {
-      console.error("Paddle page reconciliation error", error);
-    }
+  // Webhooks remain the primary path, but this low-frequency account page also
+  // reconciles against Paddle on every visit. That repairs missed/out-of-order
+  // deliveries and also detects plan changes made in Paddle's customer portal.
+  try {
+    await reconcileSubscription(user.id, user.email || null);
+    const refreshed = await supabase
+      .from("profiles")
+      .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (refreshed.data) profile = refreshed.data;
+  } catch (error) {
+    console.error("Paddle page reconciliation error", error);
   }
 
   const plan = profile?.role === "admin" ? "admin" : (profile?.subscription_plan || "free");
