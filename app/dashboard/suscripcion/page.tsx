@@ -26,10 +26,11 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     .maybeSingle();
 
   // Webhooks remain the primary path, but this low-frequency account page also
-  // reconciles against Paddle on every visit. That repairs missed/out-of-order
-  // deliveries and also detects plan changes made in Paddle's customer portal.
+  // reconciles against Paddle on every visit using only the Paddle identifiers
+  // already linked to this CoinRenta profile. Email is deliberately not used
+  // because a deleted account may later be recreated with the same address.
   try {
-    await reconcileSubscription(user.id, user.email || null);
+    await reconcileSubscription(user.id);
     const refreshed = await supabase
       .from("profiles")
       .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
