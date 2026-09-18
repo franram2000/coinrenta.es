@@ -9,7 +9,8 @@ type AdminAction = typeof adminUpdateUser | typeof adminDeleteUser;
 export default function UserActions({ userId, role, isActive, label, isSelf }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState(role || "free");
+  const normalizedRole = role === "pro" || role === "admin" ? role : "free";
+  const [selectedRole, setSelectedRole] = useState(normalizedRole);
 
   function run(action: AdminAction, data: Record<string, string>, success: string) {
     setMessage(null);
@@ -31,8 +32,8 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
   }
 
   function remove() {
-    if (isSelf || !window.confirm(`¿Revocar el acceso de ${label}? Podrás reactivarlo después.`)) return;
-    run(adminDeleteUser, { user_id: userId }, "Acceso revocado.");
+    if (isSelf || !window.confirm(`¿Eliminar definitivamente la cuenta de ${label}? Se borrarán sus datos y no podrás reactivarla después.`)) return;
+    run(adminDeleteUser, { user_id: userId }, "Usuario eliminado.");
   }
 
   return (
@@ -44,7 +45,7 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
         </select>
         <button className="user-action user-action-save" type="submit" disabled={pending}>Guardar</button>
       </form>
-      <button className="user-action user-action-delete" type="button" disabled={pending || isSelf} onClick={remove}>Revocar acceso</button>
+      <button className="user-action user-action-delete" type="button" disabled={pending || isSelf} onClick={remove}>Eliminar</button>
       {message && <span className="user-action-message">{message}</span>}
     </div>
   );
