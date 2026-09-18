@@ -121,7 +121,7 @@ export default function SubscriptionPlansSecure({ userId: _userId, customerEmail
             ? <button className="plan-button secondary" disabled>{action}</button>
             : <button
                 className={`plan-button ${item.key === "essential" ? "primary" : "pro"}`}
-                disabled={pending !== null || current || item.key === "free"}
+                disabled={pending !== null || current}
                 onClick={() => isPortalAction ? portal() : checkout(item.key as Tier)}
               >
                 {isPending ? "Abriendo…" : action}
