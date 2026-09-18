@@ -44,7 +44,7 @@ export default async function DashboardSection({ params, searchParams }: { param
     const [{ data: exchanges, error: exchangesError }, { data: connections, error: connectionsError }, { data: profile, error: profileError }] = await Promise.all([
       supabase.from('exchanges').select('id,code,name,website').eq('is_active', true).order('name'),
       supabase.from('exchange_connections').select('id,exchange_id,label,status,last_sync_at,last_sync_status,last_sync_error,provider_type,exchanges(name,code)').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('role,subscription_plan,subscription_status').eq('id', user.id).maybeSingle(),
+      supabase.from('profiles').select('role,subscription_plan,subscription_status,subscription_complimentary').eq('id', user.id).maybeSingle(),
     ]);
     if (exchangesError || connectionsError || profileError) throw new Error((exchangesError || connectionsError || profileError)!.message);
     const canUseApi = profile?.role === 'admin' || (profile?.subscription_plan === 'pro' && (profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing' || profile?.subscription_status === 'past_due' || profile?.subscription_complimentary));
@@ -77,7 +77,7 @@ export default async function DashboardSection({ params, searchParams }: { param
   }
 
   const { data: profile } = await supabase.from('profiles').select('display_name,country_code,timezone,role,subscription_plan,subscription_interval,subscription_status,subscription_current_period_end').eq('id', user.id).maybeSingle();
-  const role = profile?.role || 'free';
+  const role = profile?.role || 'user';
   const plan = role === 'admin' ? 'Admin' : profile?.subscription_plan === 'pro' ? 'Pro' : profile?.subscription_plan === 'essential' ? 'Esencial' : 'Free';
   const isPaid = plan === 'Pro' || plan === 'Esencial';
   return <><SectionHeader item={item}/><section className="dashboard-content"><div className={`subscription-card ${isPaid ? 'subscription-pro' : 'subscription-free'}`}><div className="subscription-glow"/><div className="subscription-main"><div className="subscription-icon">♛</div><div><span className="section-kicker">Tu suscripción</span><h2>Plan {plan}</h2><p>{isPaid ? 'Tu suscripción está conectada con Paddle y tu acceso se actualiza automáticamente.' : 'Estás en el plan gratuito. Puedes actualizarlo cuando quieras.'}</p></div></div><div className="subscription-meta"><span><strong>Estado</strong><b>{profile?.subscription_status || 'Activo'}</b></span><span><strong>Cuenta</strong><b>{user.email || 'Usuario'}</b></span><Link href="/dashboard/suscripcion" className="btn btn-primary">Ver planes y gestionar suscripción →</Link></div></div><div className="panel-card"><div className="panel-head"><div><span className="section-kicker">Perfil</span><h3>Datos de tu cuenta</h3></div></div><form action={updateProfile} className="form-grid"><label>Nombre visible<input name="display_name" defaultValue={profile?.display_name || ''} placeholder="Tu nombre"/></label><label>País<input value={profile?.country_code || 'ES'} readOnly/></label><label>Zona horaria<input value={profile?.timezone || 'Europe/Madrid'} readOnly/></label><div><button className="btn btn-primary" type="submit">Guardar cambios</button></div></form></div></section></>;
