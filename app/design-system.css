@@ -1,0 +1,97 @@
+/* CoinRenta Design System — shared visual + interaction primitives */
+:root{
+  --cr-bg-deep:#050812;
+  --cr-bg:#070c16;
+  --cr-surface:#0d1524;
+  --cr-surface-raised:#101b2d;
+  --cr-surface-soft:rgba(255,255,255,.025);
+  --cr-text:#f4f7fb;
+  --cr-text-soft:#c5d0dd;
+  --cr-text-muted:#8b9bb0;
+  --cr-text-subtle:#65758d;
+  --cr-accent:#68eee5;
+  --cr-accent-strong:#0fa7a0;
+  --cr-accent-bright:#27c8bd;
+  --cr-accent-soft:rgba(104,238,229,.08);
+  --cr-accent-line:rgba(104,238,229,.20);
+  --cr-border-soft:rgba(255,255,255,.065);
+  --cr-border:rgba(255,255,255,.09);
+  --cr-border-strong:rgba(255,255,255,.14);
+  --cr-success:#5dd6a0;
+  --cr-warning:#e5bd70;
+  --cr-danger:#ef9696;
+  --cr-info:#83b8e8;
+  --cr-radius-xs:8px;
+  --cr-radius-sm:11px;
+  --cr-radius-md:15px;
+  --cr-radius-lg:20px;
+  --cr-radius-xl:26px;
+  --cr-shadow-float:0 24px 70px rgba(0,0,0,.24);
+  --cr-shadow-premium:0 34px 100px rgba(0,0,0,.40);
+  --cr-shadow-accent:0 18px 48px rgba(15,167,160,.12);
+  --cr-ease:cubic-bezier(.2,.8,.2,1);
+}
+
+::selection{background:rgba(104,238,229,.20);color:#fff}
+*:focus-visible{
+  outline:2px solid rgba(104,238,229,.72);
+  outline-offset:3px;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(104,238,229,.11),0 0 0 1px rgba(104,238,229,.52);
+}
+::placeholder{color:#526177}
+button,[role="button"]{font-family:inherit}
+
+.cr-premium-surface{
+  border:1px solid var(--cr-border);
+  border-radius:var(--cr-radius-lg);
+  background:linear-gradient(145deg,rgba(16,27,45,.92),rgba(9,16,29,.96));
+  box-shadow:var(--cr-shadow-float),inset 0 1px 0 rgba(255,255,255,.03);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.cr-premium-surface-soft{
+  border:1px solid var(--cr-border-soft);
+  border-radius:var(--cr-radius-md);
+  background:rgba(255,255,255,.018);
+}
+.cr-premium-kicker{
+  color:var(--cr-accent);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+.cr-premium-muted{color:var(--cr-text-muted)}
+.cr-premium-link{color:#70ddd5;font-weight:800;transition:color .18s var(--cr-ease)}
+.cr-premium-link:hover{color:#b7fbf6}
+.cr-premium-divider{height:1px;background:linear-gradient(90deg,transparent,var(--cr-border),transparent)}
+.cr-premium-grid{
+  background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);
+  background-size:72px 72px;
+}
+.cr-status-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--cr-accent);
+  box-shadow:0 0 0 4px rgba(104,238,229,.08),0 0 16px rgba(104,238,229,.34);
+}
+.cr-premium-interactive{
+  transition:transform .2s var(--cr-ease),border-color .2s var(--cr-ease),background .2s var(--cr-ease),box-shadow .2s var(--cr-ease);
+}
+.cr-premium-interactive:hover{
+  transform:translateY(-2px);
+  border-color:var(--cr-accent-line);
+  box-shadow:var(--cr-shadow-float),0 0 30px rgba(104,238,229,.045);
+}
+@media(max-width:760px){
+  .cr-premium-interactive:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .cr-premium-interactive{transition:none}
+}
