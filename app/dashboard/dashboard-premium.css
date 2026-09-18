@@ -1,0 +1,498 @@
+/* CoinRenta Dashboard — premium product layer
+   Uses the shared design tokens from /app/design-system.css. */
+
+.dashboard-pro-shell{
+  position:relative;
+  isolation:isolate;
+  background:
+    radial-gradient(circle at 74% -8%,rgba(104,238,229,.055),transparent 25%),
+    radial-gradient(circle at 8% 78%,rgba(74,105,255,.035),transparent 24%),
+    var(--cr-bg);
+}
+.dashboard-pro-shell::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.28;
+  background-image:
+    linear-gradient(rgba(255,255,255,.014) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.014) 1px,transparent 1px);
+  background-size:76px 76px;
+  mask-image:radial-gradient(ellipse at center,black 0%,transparent 78%);
+}
+
+.dashboard-pro-shell .app-sidebar{
+  background:
+    linear-gradient(180deg,rgba(10,20,36,.96),rgba(5,12,22,.98)),
+    radial-gradient(circle at 50% 0,rgba(104,238,229,.04),transparent 35%);
+  border-right:1px solid var(--cr-border);
+  box-shadow:16px 0 50px rgba(0,0,0,.12);
+}
+.dashboard-pro-shell .coinrenta-logo{
+  padding:4px 12px 26px;
+}
+.dashboard-pro-shell .coinrenta-logo-mark{
+  filter:drop-shadow(0 0 17px rgba(104,238,229,.20));
+}
+.dashboard-pro-shell .coinrenta-logo-text{
+  letter-spacing:-.065em;
+}
+.dashboard-pro-shell .app-nav{
+  gap:6px;
+}
+.dashboard-pro-shell .sidebar-nav-label{
+  margin:0 10px 8px;
+  color:#596a81;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+}
+.dashboard-pro-shell .app-nav-item{
+  position:relative;
+  min-height:46px;
+  border:1px solid transparent;
+  border-radius:13px;
+  color:#7d8da5;
+  transition:transform .18s var(--cr-ease),background .18s var(--cr-ease),border-color .18s var(--cr-ease),color .18s var(--cr-ease),box-shadow .18s var(--cr-ease);
+}
+.dashboard-pro-shell .app-nav-item::after{
+  content:"";
+  position:absolute;
+  left:11px;
+  top:50%;
+  width:2px;
+  height:0;
+  border-radius:4px;
+  background:var(--cr-accent);
+  transform:translateY(-50%);
+  transition:height .18s var(--cr-ease);
+}
+.dashboard-pro-shell .app-nav-item:hover{
+  transform:translateX(2px);
+  border-color:var(--cr-border-soft);
+  background:rgba(255,255,255,.035);
+  color:#eaf1f6;
+}
+.dashboard-pro-shell .app-nav-item.active{
+  border-color:rgba(104,238,229,.10);
+  background:linear-gradient(90deg,rgba(104,238,229,.10),rgba(15,167,160,.035));
+  color:#eaf5f5;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02),0 8px 26px rgba(0,0,0,.10);
+}
+.dashboard-pro-shell .app-nav-item.active::after{height:20px}
+.dashboard-pro-shell .app-nav-item.active .nav-icon{color:var(--cr-accent)}
+.dashboard-pro-shell .nav-icon{color:#61738b;transition:color .18s var(--cr-ease)}
+.dashboard-pro-shell .sidebar-bottom{
+  padding-top:16px;
+}
+.dashboard-pro-shell .logout-button{
+  min-height:42px;
+  border-color:rgba(231,106,106,.18);
+  border-radius:12px;
+  background:rgba(231,106,106,.035);
+  transition:background .18s var(--cr-ease),border-color .18s var(--cr-ease),transform .18s var(--cr-ease);
+}
+.dashboard-pro-shell .logout-button:hover{
+  transform:translateY(-1px);
+  border-color:rgba(231,106,106,.34);
+}
+
+.dashboard-pro-shell .app-main{
+  background:transparent;
+}
+.dashboard-pro-shell .app-topbar{
+  position:sticky;
+  top:0;
+  z-index:15;
+  min-height:78px;
+  padding:18px 32px;
+  border-bottom:1px solid rgba(255,255,255,.065);
+  background:rgba(7,12,22,.74);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 8px 32px rgba(0,0,0,.07);
+}
+.dashboard-pro-shell .app-topbar>div{
+  min-width:0;
+}
+.dashboard-pro-shell .app-topbar h1{
+  margin-top:4px;
+  font-size:27px;
+  letter-spacing:-.05em;
+}
+.dashboard-pro-shell .app-topbar p{
+  margin:5px 0 0;
+  max-width:800px;
+  color:#74849b;
+  font-size:11px;
+  line-height:1.6;
+}
+.dashboard-pro-shell .topbar-kicker{
+  color:#58d8cf;
+}
+.dashboard-pro-shell .dashboard-content,
+.dashboard-pro-shell .dashboard-modern-content{
+  position:relative;
+}
+
+.dashboard-pro-shell .panel-card,
+.dashboard-pro-shell .stat-card,
+.dashboard-pro-shell .stat-card-modern,
+.dashboard-pro-shell .settings-card,
+.dashboard-pro-shell .profile-card,
+.dashboard-pro-shell .report-card,
+.dashboard-pro-shell .users-directory{
+  border-color:var(--cr-border-soft);
+  background:linear-gradient(145deg,rgba(14,23,39,.92),rgba(8,15,27,.96));
+  box-shadow:0 18px 50px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.dashboard-pro-shell .panel-card,
+.dashboard-pro-shell .stat-card-modern,
+.dashboard-pro-shell .settings-card,
+.dashboard-pro-shell .profile-card{
+  transition:transform .2s var(--cr-ease),border-color .2s var(--cr-ease),box-shadow .2s var(--cr-ease);
+}
+.dashboard-pro-shell .panel-card:hover,
+.dashboard-pro-shell .stat-card-modern:hover,
+.dashboard-pro-shell .settings-card:hover,
+.dashboard-pro-shell .profile-card:hover{
+  border-color:rgba(104,238,229,.10);
+  box-shadow:0 22px 62px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.03);
+}
+.dashboard-pro-shell .panel-head h3,
+.dashboard-pro-shell .settings-card-head h2,
+.dashboard-pro-shell .settings-card-head h3,
+.dashboard-pro-shell .profile-card-head h3{
+  letter-spacing:-.035em;
+}
+.dashboard-pro-shell .section-kicker{
+  color:#5edbd3;
+}
+.dashboard-pro-shell .stat-card,
+.dashboard-pro-shell .stat-card-modern{
+  position:relative;
+  overflow:hidden;
+}
+.dashboard-pro-shell .stat-card::before,
+.dashboard-pro-shell .stat-card-modern::before{
+  content:"";
+  position:absolute;
+  inset:auto 12% -42px;
+  height:70px;
+  border-radius:50%;
+  background:rgba(104,238,229,.055);
+  filter:blur(24px);
+  pointer-events:none;
+}
+.dashboard-pro-shell .stat-card strong,
+.dashboard-pro-shell .stat-card-modern strong{
+  position:relative;
+  z-index:1;
+}
+.dashboard-pro-shell .stat-card-accent,
+.dashboard-pro-shell .stat-card-modern.stat-card-accent{
+  border-color:rgba(104,238,229,.15);
+  background:linear-gradient(145deg,rgba(15,167,160,.09),rgba(10,18,31,.96));
+}
+
+.dashboard-pro-shell .btn{
+  border-radius:11px;
+  border-color:rgba(255,255,255,.10);
+  font-weight:850;
+  transition:transform .18s var(--cr-ease),background .18s var(--cr-ease),border-color .18s var(--cr-ease),box-shadow .18s var(--cr-ease),filter .18s var(--cr-ease);
+}
+.dashboard-pro-shell .btn-primary{
+  border-color:rgba(104,238,229,.15);
+  background:linear-gradient(135deg,#0fa7a0,#25c6bb);
+  color:#03100f;
+  box-shadow:0 13px 32px rgba(15,167,160,.15),inset 0 1px 0 rgba(255,255,255,.14);
+}
+.dashboard-pro-shell .btn-primary:hover{
+  background:linear-gradient(135deg,#12b3aa,#2bd1c5);
+  box-shadow:0 17px 40px rgba(15,167,160,.21),0 0 25px rgba(104,238,229,.055);
+  transform:translateY(-1px);
+}
+.dashboard-pro-shell .btn-secondary{
+  background:rgba(255,255,255,.025);
+}
+.dashboard-pro-shell .btn-secondary:hover{
+  border-color:rgba(255,255,255,.17);
+  background:rgba(255,255,255,.055);
+}
+.dashboard-pro-shell .btn-outline{
+  border-color:rgba(104,238,229,.22);
+  background:rgba(104,238,229,.045);
+  color:#69dcd4;
+}
+.dashboard-pro-shell .btn-outline:hover{
+  border-color:rgba(104,238,229,.38);
+  background:rgba(104,238,229,.08);
+}
+
+.dashboard-pro-shell input:not([type=hidden]),
+.dashboard-pro-shell select,
+.dashboard-pro-shell textarea{
+  border-color:rgba(255,255,255,.11);
+  background:linear-gradient(180deg,rgba(8,17,31,.95),rgba(7,14,25,.95));
+}
+.dashboard-pro-shell input:not([type=hidden]):focus,
+.dashboard-pro-shell select:focus,
+.dashboard-pro-shell textarea:focus{
+  border-color:rgba(104,238,229,.52);
+  box-shadow:0 0 0 3px rgba(104,238,229,.09),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.dashboard-pro-shell input[type=file]{
+  border-style:dashed;
+  background:rgba(255,255,255,.018);
+}
+
+.dashboard-pro-shell .table-wrap,
+.dashboard-pro-shell .renta-table-wrap,
+.dashboard-pro-shell .users-table-wrap{
+  border-color:var(--cr-border-soft);
+  border-radius:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+.dashboard-pro-shell table th,
+.dashboard-pro-shell .workspace-table th,
+.dashboard-pro-shell .renta-table-wrap th,
+.dashboard-pro-shell .users-table th{
+  background:rgba(255,255,255,.018);
+  color:#7f90a7;
+}
+.dashboard-pro-shell table tr,
+.dashboard-pro-shell .workspace-table tr,
+.dashboard-pro-shell .renta-table-wrap tr,
+.dashboard-pro-shell .users-table tr{
+  transition:background .15s var(--cr-ease);
+}
+.dashboard-pro-shell table tbody tr:hover,
+.dashboard-pro-shell .workspace-table tbody tr:hover,
+.dashboard-pro-shell .renta-table-wrap tbody tr:hover,
+.dashboard-pro-shell .users-table tbody tr:hover{
+  background:rgba(104,238,229,.025);
+}
+
+.dashboard-pro-shell .connected-exchange-card,
+.dashboard-pro-shell .exchange-method-card,
+.dashboard-pro-shell .exchange-card,
+.dashboard-pro-shell .quality-issue,
+.dashboard-pro-shell .loss-table>div,
+.dashboard-pro-shell .nontrans-list>div,
+.dashboard-pro-shell .settings-action,
+.dashboard-pro-shell .profile-action,
+.dashboard-pro-shell .settings-info-grid>div,
+.dashboard-pro-shell .profile-info-list>div{
+  border-color:var(--cr-border-soft);
+  background:rgba(255,255,255,.018);
+}
+.dashboard-pro-shell .connected-exchange-card:hover,
+.dashboard-pro-shell .exchange-card:hover{
+  border-color:rgba(104,238,229,.16);
+  box-shadow:0 16px 42px rgba(0,0,0,.16);
+}
+.dashboard-pro-shell .connection-status-conectado{
+  border:1px solid rgba(50,181,122,.12);
+}
+.dashboard-pro-shell .connection-status-error{
+  border:1px solid rgba(231,106,106,.14);
+}
+.dashboard-pro-shell .renta-hero,
+.dashboard-pro-shell .renta-section,
+.dashboard-pro-shell .reports-hero>div,
+.dashboard-pro-shell .reports-methodology,
+.dashboard-pro-shell .settings-hero,
+.dashboard-pro-shell .profile-hero,
+.dashboard-pro-shell .plan-card,
+.dashboard-pro-shell .subscription-card{
+  border-color:var(--cr-border-soft);
+  box-shadow:0 20px 60px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.dashboard-pro-shell .renta-hero,
+.dashboard-pro-shell .settings-hero,
+.dashboard-pro-shell .profile-hero{
+  background:
+    radial-gradient(circle at 86% 0,rgba(104,238,229,.055),transparent 25%),
+    linear-gradient(145deg,rgba(16,28,46,.95),rgba(8,15,27,.97));
+}
+.dashboard-pro-shell .renta-badge,
+.dashboard-pro-shell .status-pill,
+.dashboard-pro-shell .profile-badge.accent,
+.dashboard-pro-shell .settings-plan-badge.paid{
+  border:1px solid rgba(104,238,229,.12);
+  background:rgba(104,238,229,.07);
+}
+.dashboard-pro-shell .renta-year-switcher{
+  border-color:var(--cr-border-soft);
+  background:rgba(255,255,255,.018);
+}
+.dashboard-pro-shell .renta-year-switcher a.selected{
+  background:linear-gradient(135deg,#0fa7a0,#20bcb3);
+  box-shadow:0 7px 22px rgba(15,167,160,.15);
+}
+.dashboard-pro-shell .quality-issue-action{
+  border-color:rgba(231,182,94,.16);
+}
+.dashboard-pro-shell .quality-issue-info{
+  border-color:rgba(71,151,220,.16);
+}
+
+.dashboard-pro-shell .reports-hero{
+  gap:15px;
+}
+.dashboard-pro-shell .reports-coverage{
+  background:
+    radial-gradient(circle at 100% 0,rgba(104,238,229,.08),transparent 45%),
+    linear-gradient(145deg,rgba(16,30,48,.96),rgba(8,15,27,.98));
+}
+.dashboard-pro-shell .report-card{
+  transition:transform .2s var(--cr-ease),border-color .2s var(--cr-ease),box-shadow .2s var(--cr-ease);
+}
+.dashboard-pro-shell .report-card:hover{
+  transform:translateY(-2px);
+  border-color:rgba(104,238,229,.12);
+  box-shadow:0 25px 65px rgba(0,0,0,.19),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.dashboard-pro-shell .report-icon,
+.dashboard-pro-shell .modern-stat-icon,
+.dashboard-pro-shell .help-guide-icon{
+  border:1px solid rgba(104,238,229,.08);
+  background:linear-gradient(145deg,rgba(104,238,229,.09),rgba(15,167,160,.035));
+}
+.dashboard-pro-shell .report-action{
+  border-color:rgba(104,238,229,.18);
+  background:rgba(104,238,229,.055);
+}
+.dashboard-pro-shell .report-action:hover{
+  border-color:rgba(104,238,229,.32);
+  background:rgba(104,238,229,.09);
+}
+
+.dashboard-pro-shell .plan-card{
+  transition:transform .22s var(--cr-ease),border-color .22s var(--cr-ease),box-shadow .22s var(--cr-ease);
+}
+.dashboard-pro-shell .plan-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(104,238,229,.12);
+  box-shadow:0 28px 72px rgba(0,0,0,.22);
+}
+.dashboard-pro-shell .plan-card.featured{
+  border-color:rgba(104,238,229,.26);
+  box-shadow:0 30px 80px rgba(0,0,0,.24),0 0 45px rgba(104,238,229,.045);
+}
+.dashboard-pro-shell .plan-button.primary{
+  background:linear-gradient(135deg,#0fa7a0,#25c6bb);
+  color:#03100f;
+}
+.dashboard-pro-shell .billing-toggle{
+  box-shadow:0 16px 40px rgba(0,0,0,.14);
+}
+.dashboard-pro-shell .billing-toggle button.selected{
+  background:linear-gradient(135deg,#0fa7a0,#20bdb4);
+}
+
+.dashboard-pro-shell .help-guide{
+  background:linear-gradient(145deg,rgba(16,27,45,.88),rgba(9,16,28,.94));
+}
+.dashboard-pro-shell .help-guide:hover{
+  border-color:rgba(104,238,229,.13);
+}
+.dashboard-pro-shell .help-contact{
+  background:linear-gradient(145deg,rgba(15,167,160,.07),rgba(255,255,255,.018));
+  border-color:rgba(104,238,229,.13);
+}
+
+.dashboard-pro-shell .settings-card,
+.dashboard-pro-shell .profile-card,
+.dashboard-pro-shell .users-directory{
+  overflow:hidden;
+}
+.dashboard-pro-shell .settings-action:hover,
+.dashboard-pro-shell .profile-action:hover{
+  border-color:rgba(104,238,229,.14);
+  background:rgba(104,238,229,.035);
+}
+.dashboard-pro-shell .settings-info-icon,
+.dashboard-pro-shell .profile-action-icon,
+.dashboard-pro-shell .profile-plan-icon{
+  border:1px solid rgba(104,238,229,.08);
+  background:rgba(104,238,229,.07);
+}
+.dashboard-pro-shell .profile-avatar{
+  box-shadow:0 16px 38px rgba(15,167,160,.13),inset 0 1px 0 rgba(255,255,255,.12);
+}
+.dashboard-pro-shell .users-stat{
+  transition:transform .18s var(--cr-ease),border-color .18s var(--cr-ease),box-shadow .18s var(--cr-ease);
+}
+.dashboard-pro-shell .users-stat:hover{
+  transform:translateY(-2px);
+  border-color:rgba(104,238,229,.10);
+  box-shadow:0 20px 50px rgba(0,0,0,.18);
+}
+
+.dashboard-pro-shell .empty-state,
+.dashboard-pro-shell .connected-exchanges-empty,
+.dashboard-pro-shell .renta-empty,
+.dashboard-pro-shell .reports-state{
+  background:linear-gradient(145deg,rgba(255,255,255,.018),rgba(255,255,255,.006));
+}
+.dashboard-pro-shell .empty-icon{
+  border:1px solid rgba(104,238,229,.08);
+  box-shadow:0 0 35px rgba(104,238,229,.05);
+}
+.dashboard-pro-shell .data-row{
+  border-color:var(--cr-border-soft);
+}
+
+.mobile-menu-toggle{
+  border-color:rgba(104,238,229,.16)!important;
+  background:rgba(8,17,29,.92)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.22);
+}
+.mobile-menu-panel{
+  background:linear-gradient(180deg,rgba(10,19,33,.98),rgba(5,12,22,.99))!important;
+  border-color:rgba(255,255,255,.09)!important;
+  box-shadow:0 30px 90px rgba(0,0,0,.5)!important;
+}
+.mobile-menu-overlay.open{
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+@media(max-width:760px){
+  .dashboard-pro-shell .app-topbar{
+    position:relative;
+    min-height:70px;
+    padding:15px 14px;
+  }
+  .dashboard-pro-shell .app-topbar h1{font-size:23px}
+  .dashboard-pro-shell .panel-card:hover,
+  .dashboard-pro-shell .stat-card-modern:hover,
+  .dashboard-pro-shell .settings-card:hover,
+  .dashboard-pro-shell .profile-card:hover,
+  .dashboard-pro-shell .plan-card:hover,
+  .dashboard-pro-shell .report-card:hover,
+  .dashboard-pro-shell .users-stat:hover{
+    transform:none;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .dashboard-pro-shell .app-nav-item,
+  .dashboard-pro-shell .panel-card,
+  .dashboard-pro-shell .stat-card-modern,
+  .dashboard-pro-shell .settings-card,
+  .dashboard-pro-shell .profile-card,
+  .dashboard-pro-shell .report-card,
+  .dashboard-pro-shell .plan-card,
+  .dashboard-pro-shell .users-stat{
+    transition:none;
+  }
+  .dashboard-pro-shell .app-nav-item:hover,
+  .dashboard-pro-shell .report-card:hover,
+  .dashboard-pro-shell .plan-card:hover,
+  .dashboard-pro-shell .users-stat:hover{
+    transform:none;
+  }
+}
