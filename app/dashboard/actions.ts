@@ -247,17 +247,17 @@ export async function adminDeleteUser(formData: FormData) {
 
   const transactionIds = (transactions || []).map((row: { id: string }) => row.id);
 
-  if (transactionIds.length) {
-    for (const table of ["transaction_legs", "tax_disposals"]) {
-      const { error } = await admin
-        .from(table)
-        .delete()
-        .eq("user_id", targetId);
-      if (error && !String(error.message).toLowerCase().includes("does not exist")) {
-        throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
-      }
+  {
+    const { error } = await admin
+      .from("tax_disposals")
+      .delete()
+      .eq("user_id", targetId);
+    if (error && !String(error.message).toLowerCase().includes("does not exist")) {
+      throw new Error(`No se pudieron eliminar las disposiciones fiscales: ${error.message}`);
     }
+  }
 
+  if (transactionIds.length) {
     const { error: legsError } = await admin
       .from("transaction_legs")
       .delete()
