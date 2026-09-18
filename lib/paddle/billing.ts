@@ -227,7 +227,7 @@ export async function reconcileSubscription(userId: string) {
   const db = createAdmin();
   const { data: profile, error: profileError } = await db
     .from("profiles")
-    .select("paddle_customer_id,paddle_subscription_id,subscription_plan,subscription_status")
+    .select("paddle_customer_id,paddle_subscription_id,paddle_transaction_id,subscription_plan,subscription_status")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) throw new Error(`Supabase reconciliation profile lookup failed: ${profileError.message}`);
@@ -235,6 +235,38 @@ export async function reconcileSubscription(userId: string) {
 
   let customerIdValue = text(profile.paddle_customer_id);
   const storedSubscriptionId = text(profile.paddle_subscription_id);
+  const storedTransactionId = text(profile.paddle_transaction_id);
+
+  // After checkout, the transaction ID is stored immediately. Use it as the
+  // primary reconciliation anchor so a successful payment can provision the
+  // subscription even when the webhook is delayed or temporarily unavailable.
+  if (storedTransactionId) {
+    const transaction = await getTransaction(storedTransactionId);
+    const transactionCustomerId = customerId(transaction);
+    const transactionSubscriptionId = subscriptionId(transaction);
+
+    if (transactionCustomerId) customerIdValue = transactionCustomerId;
+
+    if (transactionSubscriptionId) {
+      const subscription = await paddleGet<{ data?: any }>(
+        `/subscriptions/${encodeURIComponent(transactionSubscriptionId)}`
+      );
+      if (subscription.data) {
+        const state = subscriptionState(subscription.data);
+        if (!state.priceRecognized) {
+          throw new Error(`Suscripción de Paddle no pertenece al catálogo CoinRenta: ${state.priceId || "sin price_id"}`);
+        }
+        await syncSubscription(subscription.data, "transaction_reconciliation", userId);
+        return {
+          found: true as const,
+          subscription: state.subscriptionId,
+          plan: state.plan,
+          status: state.status,
+          priceId: state.priceId,
+        };
+      }
+    }
+  }
 
   if (!customerIdValue && storedSubscriptionId) {
     const storedSubscription = await paddleGet<{ data?: any }>(`/subscriptions/${encodeURIComponent(storedSubscriptionId)}`);
