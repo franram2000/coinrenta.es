@@ -209,9 +209,33 @@ export default function Home() {
               {featureCards.map((card, index) => <article className={`lv-card feature-card delay-${index + 1}`} key={card.number}>
                 <div className="feature-card-top"><span>{card.number}</span><b>{card.eyebrow}</b></div>
                 <div className={"feature-icon feature-icon-" + card.icon} aria-hidden="true">
-                  {card.icon === "import" && <><i /><i /><i /></>}
-                  {card.icon === "normalize" && <><i /><i /><i /></>}
-                  {card.icon === "prepare" && <><i /><i /><i /></>}
+                  {card.icon === "import" && (
+                    <svg viewBox="0 0 48 48" role="presentation">
+                      <path d="M24 6v24" />
+                      <path d="m14 20 10 10 10-10" />
+                      <path d="M10 36h28" />
+                      <path d="M10 40h28" />
+                    </svg>
+                  )}
+                  {card.icon === "normalize" && (
+                    <svg viewBox="0 0 48 48" role="presentation">
+                      <path d="M8 14h32" />
+                      <path d="M14 24h20" />
+                      <path d="M20 34h8" />
+                      <path d="M34 14l6 0-6 6" />
+                      <path d="M14 34l-6 0 6-6" />
+                    </svg>
+                  )}
+                  {card.icon === "prepare" && (
+                    <svg viewBox="0 0 48 48" role="presentation">
+                      <rect x="10" y="7" width="28" height="34" rx="5" />
+                      <path d="m16 17 3 3 6-6" />
+                      <path d="M27 17h6" />
+                      <path d="m16 27 3 3 6-6" />
+                      <path d="M27 27h6" />
+                      <path d="M16 35h17" />
+                    </svg>
+                  )}
                 </div>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
