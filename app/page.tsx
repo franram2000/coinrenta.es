@@ -310,7 +310,7 @@ export default function Home() {
         <Link className="lv-btn lv-btn-primary" href="/registro">Comenzar <span>↗</span></Link>
       </div>
 
-      <footer className="lv-footer"><div className="lv-container footer-main"><div className="footer-brand"><img src="/logo.png" alt="CoinRenta" /><div><strong>CoinRenta</strong><span>Control y fiscalidad de criptomonedas.</span></div></div><div className="footer-copy"><span>© {new Date().getFullYear()} CoinRenta</span><span>Plataforma web para organización y apoyo fiscal cripto.</span></div><div className="footer-links"><Link href="/legal/privacidad">Privacidad</Link><Link href="/legal/terminos">Términos</Link><Link href="/legal/cookies">Cookies</Link><Link href="/legal/aviso-legal">Aviso legal</Link></div></div></footer>
+      <footer className="lv-footer"><div className="lv-container footer-main"><div className="footer-brand"><img src="/logo.png" alt="CoinRenta" /><div><strong>CoinRenta</strong><span>Control y fiscalidad de criptomonedas.</span></div></div><div className="footer-copy"><span>© {new Date().getFullYear()} CoinRenta</span><span>Plataforma web para organización y apoyo fiscal cripto.</span></div><div className="footer-links"><Link href="/legal/privacidad">Privacidad</Link><Link href="/legal/terminos">Términos</Link><Link href="/legal/cookies">Cookies</Link><Link href="/legal/aviso-legal">Aviso legal</Link><Link href="/legal/devoluciones">Devoluciones</Link></div></div></footer>
     </div>
   );
 }
