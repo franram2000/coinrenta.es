@@ -85,7 +85,7 @@ export default function PricingPage() {
 
       <section className="pricing-trust">
         <div><b>Sin permanencia</b><span>Cambia o cancela cuando quieras.</span></div>
-        <div><b>Pago seguro</b><span>Gestionado mediante Stripe.</span></div>
+        <div><b>Pago seguro</b><span>Gestionado mediante Paddle.</span></div>
         <div><b>Tus datos son tuyos</b><span>CoinRenta no sustituye tu control sobre la información.</span></div>
       </section>
 
