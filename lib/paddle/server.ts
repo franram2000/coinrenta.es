@@ -5,16 +5,16 @@ export type PaddleInterval = "month" | "year";
 
 export const PADDLE_PRICES: Record<PaddlePlan, Record<PaddleInterval, string>> = {
   essential: {
-    month: "pri_01m2nag708jv99wfyg5tas9nj7",
-    year: "pri_01m2nak77d41b73gg7edjc6wt5",
+    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_MONTHLY || "",
+    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_ESSENTIAL_YEARLY || "",
   },
   pro: {
-    month: "pri_01m2nan6ame0k307m9fy2d18n6",
-    year: "pri_01m2napvxh7jx0qgwsp4myrz08",
+    month: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_MONTHLY || "",
+    year: process.env.NEXT_PUBLIC_PADDLE_PRICE_PRO_YEARLY || "",
   },
 };
 
-const PADDLE_API_BASE = "https://sandbox-api.paddle.com";
+const PADDLE_API_BASE = process.env.PADDLE_ENVIRONMENT === "sandbox" ? "https://sandbox-api.paddle.com" : "https://api.paddle.com";
 const PAID_STATUSES = new Set(["active", "past_due", "trialing"]);
 const ACCESS_STATUSES = new Set(["active", "past_due", "trialing"]);
 
