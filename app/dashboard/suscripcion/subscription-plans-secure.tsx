@@ -9,6 +9,8 @@ type Props = {
   plan: string;
   interval: string | null;
   periodEnd: string | null;
+  paddleSubscriptionId: string | null;
+  complimentary: boolean;
 };
 type Tier = "essential" | "pro";
 
@@ -18,7 +20,7 @@ const plans = [
   { key: "pro" as const, name: "Pro", monthly: "7,99 €", annual: "79,90 €", eyebrow: "Máximo control", copy: "Para carteras activas y usuarios con varios exchanges.", features: ["Hasta 5.000 operaciones por año", "Todas las funciones de Esencial", "Conexiones y sincronización avanzada", "Conciliación y revisión avanzada", "Prioridad en soporte"] },
 ];
 
-export default function SubscriptionPlansSecure({ userId: _userId, customerEmail: _customerEmail, plan, interval, periodEnd }: Props) {
+export default function SubscriptionPlansSecure({ userId: _userId, customerEmail: _customerEmail, plan, interval, periodEnd, paddleSubscriptionId, complimentary }: Props) {
   const [billing, setBilling] = useState<"month" | "year">(interval === "year" ? "year" : "month");
   const [paddle, setPaddle] = useState<Paddle | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -88,6 +90,7 @@ export default function SubscriptionPlansSecure({ userId: _userId, customerEmail
   }
 
   const paidPlan = plan === "essential" || plan === "pro";
+  const managedByPaddle = paidPlan && Boolean(paddleSubscriptionId) && !complimentary;
   const end = periodEnd ? new Intl.DateTimeFormat("es-ES", { dateStyle: "long" }).format(new Date(periodEnd)) : null;
 
   return <>
@@ -97,8 +100,14 @@ export default function SubscriptionPlansSecure({ userId: _userId, customerEmail
       {plans.map((item) => {
         const current = plan === item.key;
         const price = billing === "year" ? item.annual : item.monthly;
-        const action = item.key === "free" ? "Plan actual" : paidPlan ? "Gestionar suscripción" : `Elegir ${item.name}`;
-        const isPortalAction = item.key !== "free" && paidPlan;
+        const action = item.key === "free"
+          ? (current ? "Plan actual" : "No disponible")
+          : current
+            ? "Plan actual"
+            : managedByPaddle
+              ? "Gestionar suscripción"
+              : `Elegir ${item.name}`;
+        const isPortalAction = item.key !== "free" && managedByPaddle && !current;
         const isPending = isPortalAction ? pending === "portal" : pending === `${item.key}-${billing}`;
 
         return <article className={`plan-card ${item.key === "essential" ? "featured" : ""} ${current ? "current" : ""}`} key={item.key}>
@@ -112,7 +121,7 @@ export default function SubscriptionPlansSecure({ userId: _userId, customerEmail
             ? <button className="plan-button secondary" disabled>{action}</button>
             : <button
                 className={`plan-button ${item.key === "essential" ? "primary" : "pro"}`}
-                disabled={pending !== null}
+                disabled={pending !== null || current || item.key === "free"}
                 onClick={() => isPortalAction ? portal() : checkout(item.key as Tier)}
               >
                 {isPending ? "Abriendo…" : action}
