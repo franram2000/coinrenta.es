@@ -35,7 +35,7 @@ const faqItems = [
   },
   {
     question: "¿Puedo reunir operaciones de varios exchanges?",
-    answer: "Sí. El objetivo de CoinRenta es centralizar información procedente de diferentes fuentes mediante conexiones disponibles e importaciones CSV, manteniendo identificado el origen de los datos para facilitar su revisión.",
+    answer: "Sí. El objetivo de CoinRenta es centralizar información procedente de diferentes fuentes mediante conexiones disponibles e importaciones CSV, manteniendo identificado el origen de cada dato para facilitar la revisión fiscal.",
   },
   {
     question: "¿CoinRenta presenta mi declaración de la Renta?",
@@ -68,7 +68,7 @@ function JsonLd() {
         "@id": "https://coinrenta.es/#website",
         url: "https://coinrenta.es",
         name: "CoinRenta",
-        description: "Controla tus operaciones de criptomonedas y prepara tus datos para la Renta desde un único espacio.",
+        description: "Organiza tu actividad con criptomonedas y prepara tus datos para la Renta desde un único espacio.",
         publisher: { "@id": "https://coinrenta.es/#organization" },
         inLanguage: "es-ES",
       },
@@ -79,7 +79,7 @@ function JsonLd() {
         url: "https://coinrenta.es",
         applicationCategory: "FinanceApplication",
         operatingSystem: "Web",
-        description: "Aplicación web para consolidar operaciones de criptomonedas, controlar una cartera y preparar información fiscal.",
+        description: "Aplicación web para consolidar operaciones de criptomonedas y preparar información fiscal para la Renta.",
         publisher: { "@id": "https://coinrenta.es/#organization" },
       },
       {
@@ -125,7 +125,7 @@ export default function Home() {
           </Link>
           <nav className="lv-links" aria-label="Navegación principal">
             <a href="#como-funciona">Cómo funciona</a>
-            <a href="#fiscalidad">Fiscalidad</a>
+            <a href="#fiscalidad">Renta</a>
             <a href="#seguridad">Seguridad</a>
             <a href="#preguntas">Preguntas</a>
           </nav>
@@ -161,15 +161,15 @@ export default function Home() {
               <div className="lv-terminal">
                 <div className="lv-terminal-head">
                   <div className="lv-terminal-brand"><img src="/logo.png" alt="" /> <span>COINRENTA / CONTROL</span></div>
-                  <div className="lv-live"><i /> INFORMACIÓN CONSOLIDADA</div>
+                  <div className="lv-live"><i /> DATOS FISCALES</div>
                 </div>
                 <div className="lv-terminal-body">
                   <div className="dashboard-top-row">
-                    <div className="lv-total"><small>Patrimonio consolidado</small><strong>28.416,72 €</strong><span className="lv-up">↑ visión unificada</span></div>
-                    <div className="mini-kpi"><small>Movimientos</small><strong>1.284</strong><span>identificados</span></div>
+                    <div className="lv-total"><small>Operaciones procesadas</small><strong>1.284</strong><span className="lv-up">✓ datos trazables</span></div>
+                    <div className="mini-kpi"><small>Estado fiscal</small><strong>Listo</strong><span>para revisar</span></div>
                   </div>
                   <div className="lv-chart-card">
-                    <div className="chart-label"><span>Evolución de la cartera</span><b>HISTÓRICO</b></div>
+                    <div className="chart-label"><span>Actividad por periodo</span><b>RESUMEN</b></div>
                     <svg viewBox="0 0 700 200" preserveAspectRatio="none" aria-hidden="true">
                       <defs>
                         <linearGradient id="heroArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#38d7cb" stopOpacity=".35" /><stop offset="1" stopColor="#38d7cb" stopOpacity="0" /></linearGradient>
@@ -182,9 +182,9 @@ export default function Home() {
                     </svg>
                   </div>
                   <div className="lv-assets">
-                    <div className="lv-asset"><span className="asset-mark asset-btc">₿</span><div><b>BTC</b><small>Bitcoin</small></div><strong>12.840,00 €</strong></div>
-                    <div className="lv-asset"><span className="asset-mark asset-eth">◆</span><div><b>ETH</b><small>Ethereum</small></div><strong>8.416,20 €</strong></div>
-                    <div className="lv-asset"><span className="asset-mark asset-usdc">$</span><div><b>USDC</b><small>USD Coin</small></div><strong>7.160,52 €</strong></div>
+                    <div className="lv-asset"><span className="asset-mark asset-btc">✓</span><div><b>COMPRAS</b><small>identificadas</small></div><strong>428</strong></div>
+                    <div className="lv-asset"><span className="asset-mark asset-eth">↔</span><div><b>INTERCAMBIOS</b><small>normalizados</small></div><strong>217</strong></div>
+                    <div className="lv-asset"><span className="asset-mark asset-usdc">€</span><div><b>RESULTADOS</b><small>para revisar</small></div><strong>✓</strong></div>
                   </div>
                 </div>
               </div>
@@ -258,14 +258,19 @@ export default function Home() {
               <div className="metric-row"><div><strong>01</strong><span>Importa</span></div><i>→</i><div><strong>02</strong><span>Ordena</span></div><i>→</i><div><strong>03</strong><span>Revisa</span></div></div>
               <Link className="lv-btn lv-btn-primary" href="/registro">Crear mi espacio <span>↗</span></Link>
             </div>
-            <div className="stack-visual" aria-hidden="true">
-              <div className="stack-card stack-back"><span>FUENTES</span><b>03</b><small>centralizadas</small></div>
-              <div className="stack-card stack-mid"><span>MOVIMIENTOS</span><b>1.284</b><small>identificados</small></div>
+            <div className="stack-visual tax-summary-visual" aria-hidden="true">
+              <div className="stack-card stack-back"><span>FUENTES</span><b>03</b><small>consolidadas</small></div>
+              <div className="stack-card stack-mid"><span>OPERACIONES</span><b>1.284</b><small>normalizadas</small></div>
               <div className="stack-card stack-front">
-                <div className="stack-front-head"><span>CONTROL DE CARTERA</span><i>LIVE</i></div>
-                <strong>28.416,72 €</strong>
-                <div className="stack-bars"><i style={{ height: "44%" }} /><i style={{ height: "68%" }} /><i style={{ height: "52%" }} /><i style={{ height: "82%" }} /><i style={{ height: "61%" }} /><i style={{ height: "93%" }} /></div>
-                <div className="stack-foot"><span>BTC · 45,2%</span><span>ETH · 29,6%</span><span>USDC · 25,2%</span></div>
+                <div className="stack-front-head"><span>PREPARACIÓN FISCAL</span><i>REVISAR</i></div>
+                <strong>Renta · 2025</strong>
+                <div className="tax-check-list">
+                  <div><span>✓</span> Operaciones identificadas</div>
+                  <div><span>✓</span> Costes y adquisiciones</div>
+                  <div><span>✓</span> Ventas e intercambios</div>
+                  <div><span>→</span> Datos pendientes de revisión</div>
+                </div>
+                <div className="stack-foot"><span>TRAZABILIDAD</span><span>RESUMEN FISCAL</span><span>DATOS ORDENADOS</span></div>
               </div>
             </div>
           </div>
@@ -296,12 +301,12 @@ export default function Home() {
 
         <section className="lv-section cta-section">
           <div className="cta-aurora" aria-hidden="true" />
-          <div className="lv-container"><div className="lv-cta"><div className="cta-logo-orbit" aria-hidden="true"><img src="/logo.png" alt="" /></div><div className="lv-kicker">Empieza con una cartera bajo control</div><h2>Deja de buscar datos.<br /><span>Empieza a entenderlos.</span></h2><p>Centraliza tu actividad cripto, ordena tus movimientos y llega a la revisión fiscal con una base de información mucho más clara.</p><div className="lv-hero-actions" style={{ justifyContent: "center" }}><Link className="lv-btn lv-btn-primary lv-btn-xl" href="/registro">Comenzar <span>↗</span></Link><Link className="lv-btn lv-btn-ghost lv-btn-xl" href="/login">Ya tengo una cuenta</Link></div></div></div>
+          <div className="lv-container"><div className="lv-cta"><div className="cta-logo-orbit" aria-hidden="true"><img src="/logo.png" alt="" /></div><div className="lv-kicker">Empieza con tu información fiscal bajo control</div><h2>Deja de buscar datos.<br /><span>Empieza a entenderlos.</span></h2><p>Centraliza tu actividad cripto, ordena tus movimientos y llega a la revisión fiscal con una base de información mucho más clara.</p><div className="lv-hero-actions" style={{ justifyContent: "center" }}><Link className="lv-btn lv-btn-primary lv-btn-xl" href="/registro">Comenzar <span>↗</span></Link><Link className="lv-btn lv-btn-ghost lv-btn-xl" href="/login">Ya tengo una cuenta</Link></div></div></div>
         </section>
       </main>
 
       <div className="mobile-cta-bar" aria-label="Acceso rápido a CoinRenta">
-        <div><strong>CoinRenta</strong><span>Ordena tu actividad cripto</span></div>
+        <div><strong>CoinRenta</strong><span>Ordena tus datos para la Renta</span></div>
         <Link className="lv-btn lv-btn-primary" href="/registro">Comenzar <span>↗</span></Link>
       </div>
 
