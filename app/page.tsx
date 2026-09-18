@@ -144,14 +144,14 @@ export default function Home() {
           <div className="hero-grid-lines" aria-hidden="true" />
           <div className="lv-container lv-hero-grid">
             <div className="hero-copy">
-              <div className="lv-kicker"><i /> Control y fiscalidad de criptomonedas</div>
-              <h1 id="hero-title">Tus operaciones cripto.<br /><span>Ordenadas.</span><br /><em>Preparadas para la Renta.</em></h1>
-              <p className="lv-hero-copy"><strong>CoinRenta pone orden donde normalmente hay exchanges, wallets, CSV y cientos de movimientos.</strong> Centraliza tu actividad, entiende tus datos y prepara la información que necesitas para revisar tu fiscalidad en España.</p>
+              <div className="lv-kicker hero-kicker"><i /> Preparación fiscal cripto · España <span>2026</span></div>
+              <h1 id="hero-title">De tus movimientos<br /><span>a una Renta</span><br /><em>mucho más clara.</em></h1>
+              <p className="lv-hero-copy"><strong>CoinRenta convierte exchanges, wallets, CSV y cientos de movimientos en información fiscal ordenada.</strong> Importa, normaliza y revisa tus datos en un espacio pensado para llegar a la Renta con todo mucho más claro.</p>
               <div className="lv-hero-actions">
                 <Link className="lv-btn lv-btn-primary lv-btn-xl" href="/registro">Comenzar <span>↗</span></Link>
                 <a className="lv-btn lv-btn-ghost lv-btn-xl" href="#como-funciona">Descubrir cómo funciona <span>↓</span></a>
               </div>
-              <div className="lv-proof"><span><b>✓</b> Multi-fuente</span><span><b>✓</b> CSV + conexiones</span><span><b>✓</b> Espacio privado</span></div>
+              <div className="lv-proof"><span><b>✓</b> Multi-fuente</span><span><b>✓</b> Trazabilidad</span><span><b>✓</b> Privado</span></div>
               <p className="hero-disclaimer">Herramienta de organización y apoyo fiscal. No sustituye el asesoramiento fiscal ni la presentación de declaraciones ante la Administración.</p>
             </div>
 
@@ -201,9 +201,9 @@ export default function Home() {
           <div className="lv-container">
             <div className="section-index">01 / CÓMO FUNCIONA</div>
             <div className="lv-section-head wide">
-              <div className="lv-kicker">Una forma más seria de gestionar tu actividad cripto.</div>
-              <h2>Del movimiento aislado<br /><span>a una visión completa.</span></h2>
-              <p>No necesitas recordar qué ocurrió en cada plataforma. CoinRenta está diseñada para reunir la información, darle estructura y ayudarte a detectar qué debes revisar antes de hacer tus cuentas.</p>
+              <div className="lv-kicker">Un flujo diseñado alrededor de la fiscalidad.</div>
+              <h2>Importa una vez.<br /><span>Entiende lo que tienes.</span></h2>
+              <p>CoinRenta reúne la información de tus fuentes, la convierte en operaciones coherentes y te ayuda a localizar lo que todavía necesita revisión antes de preparar tus datos fiscales.</p>
             </div>
             <div className="lv-grid3 feature-grid">
               {featureCards.map((card, index) => <article className={`lv-card feature-card delay-${index + 1}`} key={card.number}>
@@ -251,10 +251,10 @@ export default function Home() {
           <div className="section-mesh" aria-hidden="true" />
           <div className="lv-container visual-split">
             <div className="visual-copy">
-              <div className="section-index">02 / FISCALIDAD CRIPTO</div>
+              <div className="section-index">02 / RENTA</div>
               <div className="lv-kicker">Pensado para el contexto fiscal español</div>
-              <h2>Más control sobre<br /><span>lo que tienes que revisar.</span></h2>
-              <p>La fiscalidad de los criptoactivos no empieza cuando abres la declaración: empieza mucho antes, cuando necesitas reconstruir qué compraste, qué vendiste, qué intercambiaste, qué transferiste y qué información falta.</p>
+              <h2>Tu información fiscal,<br /><span>sin el caos de origen.</span></h2>
+              <p>La parte difícil no suele ser abrir la declaración. Es reconstruir qué ocurrió: compras, ventas, intercambios, transferencias, comisiones y datos que llegan desde fuentes diferentes. CoinRenta está pensada para ordenar ese recorrido.</p>
               <div className="metric-row"><div><strong>01</strong><span>Importa</span></div><i>→</i><div><strong>02</strong><span>Ordena</span></div><i>→</i><div><strong>03</strong><span>Revisa</span></div></div>
               <Link className="lv-btn lv-btn-primary" href="/registro">Crear mi espacio <span>↗</span></Link>
             </div>
@@ -278,7 +278,7 @@ export default function Home() {
 
         <section className="lv-section security-section" id="seguridad">
           <div className="lv-container">
-            <div className="section-index">03 / SEGURIDAD Y PRIVACIDAD</div>
+            <div className="section-index">03 / CONFIANZA</div>
             <div className="security-grid">
               <div className="lv-section-head"><div className="lv-kicker">Diseñado para tratar tus datos con cuidado</div><h2>Control, privacidad<br /><span>y permisos mínimos.</span></h2><p>Tu actividad financiera merece algo más que una interfaz bonita. CoinRenta está construida para mantener las áreas privadas protegidas, separar los datos por usuario y reducir los permisos de las conexiones externas siempre que la fuente lo permita.</p></div>
               <div className="security-list">
@@ -301,7 +301,7 @@ export default function Home() {
 
         <section className="lv-section cta-section">
           <div className="cta-aurora" aria-hidden="true" />
-          <div className="lv-container"><div className="lv-cta"><div className="cta-logo-orbit" aria-hidden="true"><img src="/logo.png" alt="" /></div><div className="lv-kicker">Empieza con tu información fiscal bajo control</div><h2>Deja de buscar datos.<br /><span>Empieza a entenderlos.</span></h2><p>Centraliza tu actividad cripto, ordena tus movimientos y llega a la revisión fiscal con una base de información mucho más clara.</p><div className="lv-hero-actions" style={{ justifyContent: "center" }}><Link className="lv-btn lv-btn-primary lv-btn-xl" href="/registro">Comenzar <span>↗</span></Link><Link className="lv-btn lv-btn-ghost lv-btn-xl" href="/login">Ya tengo una cuenta</Link></div></div></div>
+          <div className="lv-container"><div className="lv-cta"><div className="cta-logo-orbit" aria-hidden="true"><img src="/logo.png" alt="" /></div><div className="lv-kicker">Tu próxima Renta empieza mucho antes</div><h2>Menos caos.<br /><span>Más información útil.</span></h2><p>Importa tus fuentes, normaliza tus operaciones y prepara una base de información clara para revisar tu situación fiscal en España.</p><div className="lv-hero-actions" style={{ justifyContent: "center" }}><Link className="lv-btn lv-btn-primary lv-btn-xl" href="/registro">Comenzar <span>↗</span></Link><Link className="lv-btn lv-btn-ghost lv-btn-xl" href="/login">Ya tengo una cuenta</Link></div></div></div>
         </section>
       </main>
 
