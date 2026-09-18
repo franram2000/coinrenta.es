@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PasswordResetForm from "@/components/password-reset-form";
-import AuthStatusLayout from "@/components/auth-status-layout";
+import AuthBrandPanel from "@/components/auth-brand-panel";
 
 export const metadata: Metadata = {
   title: "Nueva contraseña",
@@ -25,13 +25,7 @@ export default async function ResetPasswordPage() {
       <div className="auth-glow auth-glow-one" aria-hidden="true" />
       <div className="auth-glow auth-glow-two" aria-hidden="true" />
       <section className="auth-layout auth-status-layout" aria-label="Restablecimiento de contraseña">
-        <div className="auth-brand-panel auth-brand-panel-recovery">
-          <div className="auth-brand-copy auth-reset-brand-copy">
-            <span className="auth-eyebrow">Seguridad de tu cuenta</span>
-            <h1>Crea una nueva contraseña.</h1>
-            <p>Elige una contraseña nueva y vuelve a tener tu cuenta protegida.</p>
-          </div>
-        </div>
+        <AuthBrandPanel variant="recovery" />
         <div className="auth-form-column">
           <section className="auth-card" aria-labelledby="reset-title">
             <div className="auth-card-head">
