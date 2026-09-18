@@ -7,7 +7,6 @@ import "./auth.css";
 import "./site-ui-polish.css";
 import CookieConsent from "@/components/cookie-consent";
 import AnalyticsConsent from "@/components/analytics-consent";
-import LegalQuickLink from "@/components/legal-quick-link";
 
 const siteUrl = "https://coinrenta.es";
 const siteTitle = "CoinRenta | Control y fiscalidad de criptomonedas en España";
@@ -35,5 +34,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#050812", colorScheme: "dark" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es" className="dark"><body>{children}<LegalQuickLink /><AnalyticsConsent /><CookieConsent /></body></html>;
+  return <html lang="es" className="dark"><body>{children}<AnalyticsConsent /><CookieConsent /></body></html>;
 }
