@@ -42,3 +42,92 @@
 .landing-v2 .lv-container{width:calc(100% - 28px)}.landing-v2 .lv-nav-inner{height:58px;padding-left:12px}.landing-v2 .lv-brand img{width:34px;height:34px}.landing-v2 .lv-brand span{font-size:17px}.landing-v2 .lv-actions .lv-btn-ghost{display:none}.landing-v2 .lv-actions .lv-btn{min-height:38px}.landing-v2 .lv-hero{min-height:auto;padding:120px 0 95px}.landing-v2 h1{font-size:clamp(49px,15vw,72px)}.landing-v2 .lv-hero-copy{font-size:14px}.landing-v2 .lv-hero-actions .lv-btn{width:100%}.landing-v2 .lv-proof{gap:11px}.landing-v2 .lv-visual{min-height:435px;margin-top:12px}.visual-halo{width:350px;height:350px}.landing-v2 .lv-terminal{width:100%;border-radius:19px}.landing-v2 .lv-terminal-head{padding:0 11px}.landing-v2 .lv-terminal-brand span{font-size:7px}.dashboard-top-row{grid-template-columns:1fr}.mini-kpi{display:none}.landing-v2 .lv-total strong{font-size:25px}.lv-chart-card svg{height:120px}.landing-v2 .lv-assets{grid-template-columns:1fr}.floating-pill-one{left:-4px;top:7%}.floating-pill-two{right:-4px;bottom:4%}.hero-scroll{display:none}.landing-v2 .lv-section{padding:82px 0}.landing-v2 .lv-section-head h2,.visual-copy h2,.security-grid h2,.faq-head h2,.lv-cta h2{font-size:clamp(38px,12vw,54px)}.landing-v2 .feature-grid{grid-template-columns:1fr}.landing-v2 .feature-card{min-height:0;height:auto;padding:21px 20px 28px}.landing-v2 .feature-icon{margin-top:27px;width:60px;height:60px}.metric-row{gap:11px}.metric-row div strong{font-size:30px}.stack-visual{min-height:360px}.stack-back{width:61%;height:150px}.stack-mid{width:68%;height:160px;left:3%;top:55px}.stack-front{width:88%;left:6%;top:104px;min-height:210px;padding:19px}.stack-front>strong{font-size:27px}.stack-bars{height:75px;gap:6px}.stack-foot{flex-wrap:wrap}.security-row{grid-template-columns:32px 1fr}.security-row em{display:none}.faq-item summary{grid-template-columns:32px 1fr 25px}.faq-item p{margin-left:32px}.footer-main{grid-template-columns:1fr;gap:18px}.footer-links{justify-content:flex-start;flex-wrap:wrap;gap:12px}.landing-intro .intro-logo-wrap{width:155px;height:155px}.landing-intro .intro-logo{width:95px;height:95px}}
 
 @media(prefers-reduced-motion:reduce){.landing-v2 *, .landing-v2 *:before,.landing-v2 *:after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}.landing-intro{display:none}}
+
+
+/* UX/UI pass — landing hierarchy, interaction states and mobile conversion */
+.landing-v2 { scroll-padding-top: 92px; }
+.landing-v2 .lv-container { width:min(1200px,calc(100% - 40px)); }
+.landing-v2 .lv-btn { min-height:44px; }
+.landing-v2 .lv-btn:focus-visible,
+.landing-v2 .lv-links a:focus-visible,
+.landing-v2 .faq-item summary:focus-visible,
+.landing-v2 .lv-brand:focus-visible {
+  outline:2px solid var(--lv-cyan);
+  outline-offset:4px;
+}
+.landing-v2 .lv-btn:active { transform:translateY(0) scale(.98); }
+.landing-v2 .lv-actions .lv-btn-primary { min-width:108px; }
+.landing-v2 .lv-hero-actions .lv-btn-primary { min-width:148px; }
+.landing-v2 .lv-proof { align-items:center; }
+.landing-v2 .lv-proof span { padding:5px 0; }
+.landing-v2 .feature-grid { position:relative; }
+.landing-v2 .feature-grid:before {
+  content:"";
+  position:absolute;
+  z-index:0;
+  left:12%;
+  right:12%;
+  top:126px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(104,238,229,.22),rgba(104,238,229,.22),transparent);
+  pointer-events:none;
+}
+.landing-v2 .feature-card { z-index:1; }
+.landing-v2 .feature-card-top b { letter-spacing:.16em; }
+.landing-v2 .feature-card:hover .feature-icon {
+  border-color:rgba(104,238,229,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 28px rgba(15,167,160,.12);
+}
+.landing-v2 .feature-icon svg { transition:transform .3s ease; }
+.landing-v2 .feature-card:hover .feature-icon svg { transform:scale(1.07); }
+.landing-v2 .faq-item summary { border-radius:10px; transition:background .2s ease; }
+.landing-v2 .faq-item summary:hover { background:rgba(255,255,255,.025); }
+.landing-v2 .faq-item summary strong { transition:color .2s ease; }
+.landing-v2 .faq-item summary:hover strong { color:#f4fbff; }
+.landing-v2 .lv-footer a:focus-visible { outline:2px solid var(--lv-cyan); outline-offset:3px; border-radius:4px; }
+.mobile-cta-bar { display:none; }
+
+@media(max-width:1000px) {
+  .landing-v2 .feature-grid:before { left:8%; right:8%; }
+}
+@media(max-width:650px) {
+  .landing-v2 { padding-bottom:74px; }
+  .landing-v2 .lv-container { width:calc(100% - 28px); }
+  .landing-v2 .lv-nav-inner { box-shadow:0 10px 35px rgba(0,0,0,.28); }
+  .landing-v2 .lv-actions { gap:6px; }
+  .landing-v2 .lv-actions .lv-btn { padding-inline:12px; }
+  .landing-v2 .lv-proof { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .landing-v2 .lv-proof span { justify-content:center; min-width:0; white-space:nowrap; font-size:8px; }
+  .landing-v2 .feature-grid { gap:12px; }
+  .landing-v2 .feature-grid:before { display:none; }
+  .landing-v2 .feature-card { border-radius:18px; }
+  .landing-v2 .feature-card:active { transform:scale(.995); }
+  .landing-v2 .lv-section-head { margin-bottom:34px; }
+  .landing-v2 .metric-row { justify-content:space-between; }
+  .landing-v2 .lv-cta { padding:58px 20px; border-radius:22px; }
+  .mobile-cta-bar {
+    position:fixed;
+    z-index:80;
+    left:10px;
+    right:10px;
+    bottom:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:8px 8px 8px 14px;
+    border:1px solid rgba(104,238,229,.18);
+    border-radius:16px;
+    background:rgba(6,12,21,.88);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    box-shadow:0 16px 45px rgba(0,0,0,.45);
+  }
+  .mobile-cta-bar div { min-width:0; }
+  .mobile-cta-bar strong { display:block; color:#e8f1f7; font-size:10px; }
+  .mobile-cta-bar span { display:block; margin-top:1px; color:#71839a; font-size:8px; white-space:nowrap; }
+  .mobile-cta-bar .lv-btn { min-height:40px; padding:0 14px; flex:0 0 auto; font-size:10px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .landing-v2 .feature-icon svg { transition:none; }
+}
