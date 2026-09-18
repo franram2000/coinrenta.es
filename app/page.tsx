@@ -8,18 +8,21 @@ const featureCards = [
     eyebrow: "IMPORTA",
     title: "Reúne tu actividad cripto en un solo lugar.",
     text: "Conecta fuentes compatibles o importa archivos CSV. Mantén el origen de cada movimiento para poder revisar tu información con contexto.",
+    icon: "import",
   },
   {
     number: "02",
     eyebrow: "NORMALIZA",
     title: "Convierte operaciones dispersas en información útil.",
     text: "Compras, ventas, intercambios, transferencias y comisiones dejan de estar repartidos entre plataformas y archivos difíciles de revisar.",
+    icon: "normalize",
   },
   {
     number: "03",
     eyebrow: "PREPARA",
     title: "Llega a la Renta con los datos bajo control.",
     text: "Consulta resultados y movimientos, identifica información pendiente y prepara una base ordenada para revisar tu situación fiscal en España.",
+    icon: "prepare",
   },
 ];
 
@@ -205,7 +208,11 @@ export default function Home() {
             <div className="lv-grid3 feature-grid">
               {featureCards.map((card, index) => <article className={`lv-card feature-card delay-${index + 1}`} key={card.number}>
                 <div className="feature-card-top"><span>{card.number}</span><b>{card.eyebrow}</b></div>
-                <div className="feature-icon"><i /><i /><i /></div>
+                <div className={"feature-icon feature-icon-" + card.icon} aria-hidden="true">
+                  {card.icon === "import" && <><i /><i /><i /></>}
+                  {card.icon === "normalize" && <><i /><i /><i /></>}
+                  {card.icon === "prepare" && <><i /><i /><i /></>}
+                </div>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
                 <div className="feature-line" />
