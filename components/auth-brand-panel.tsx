@@ -1,9 +1,7 @@
-"use client";
-
 import Image from "next/image";
 
 type AuthBrandPanelProps = {
-  variant: "login" | "register" | "recovery";
+  variant: "login" | "register" | "recovery" | "status";
 };
 
 const content = {
@@ -24,6 +22,12 @@ const content = {
     title: "Recupera el acceso sin complicaciones.",
     description: "Te ayudamos a recuperar tu cuenta y volver a tu espacio de CoinRenta manteniendo el proceso simple y seguro.",
     trust: ["Enlace personal", "Proceso seguro", "Datos privados"],
+  },
+  status: {
+    kicker: "Todo en orden",
+    title: "Continúa desde tu espacio CoinRenta.",
+    description: "Tu cuenta está lista para seguir. Mantén tus movimientos organizados y vuelve a tu espacio de trabajo.",
+    trust: ["Cuenta privada", "Datos trazables", "Control fiscal"],
   },
 } as const;
 
