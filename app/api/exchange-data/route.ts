@@ -58,6 +58,16 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
 
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role,subscription_plan,subscription_status')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+  const canUseApi = profile?.role === 'admin'
+    || profile?.role === 'pro'
+    || (profile?.subscription_plan === 'pro' && ['active', 'trialing', 'past_due'].includes(String(profile?.subscription_status || '')));
+
   const url = new URL(request.url);
   const connectionId = String(url.searchParams.get('connection_id') || '').trim();
   if (!connectionId) return NextResponse.json({ error: 'Falta connection_id.' }, { status: 400 });
@@ -84,6 +94,9 @@ export async function GET(request: Request) {
   if (!accountIds.length) return NextResponse.json({ error: 'La conexión no tiene una cuenta activa.' }, { status: 409 });
 
   if (connection.provider_type === 'api') {
+    if (!canUseApi) {
+      return NextResponse.json({ error: 'La importación por API requiere un plan Pro o una cuenta Admin.' }, { status: 403 });
+    }
     return NextResponse.json({ error: 'La sincronización API de este exchange todavía no tiene un conector fiscal activo.' }, { status: 409 });
   }
 
