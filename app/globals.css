@@ -173,9 +173,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .app-nav-item:hover { color:var(--cr-text); background:rgba(255,255,255,.035); }
 .app-nav-item.active { color:var(--cr-text); background:rgba(15,167,160,.11); }
 .app-nav-item.active span { color:#6DE0D7; }
-.sidebar-bottom { margin-top:auto; display:grid; gap:5px; }
-.logout-button { width:100%; min-height:43px; padding:0 12px; border:1px solid var(--cr-border); border-radius:11px; background:transparent; color:#8796AA; text-align:left; font-size:12px; font-weight:750; cursor:pointer; }
-.logout-button:hover { color:var(--cr-text); background:rgba(255,255,255,.035); }
+.sidebar-bottom { margin-top:12px; display:grid; gap:5px; }
+.logout-button { width:100%; min-height:43px; padding:0 12px; border:1px solid rgba(231,106,106,.24); border-radius:11px; background:rgba(231,106,106,.06); color:#F07A7A; text-align:left; font-size:12px; font-weight:800; cursor:pointer; }
+.logout-button:hover { color:#FF9A9A; border-color:rgba(231,106,106,.42); background:rgba(231,106,106,.11); }
 .app-main { min-width:0; }
 .app-topbar { min-height:82px; display:flex; justify-content:space-between; align-items:center; padding:18px 34px; border-bottom:1px solid var(--cr-border); background:rgba(7,12,22,.74); backdrop-filter:blur(12px); }
 .topbar-kicker { color:#6D7B90; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
