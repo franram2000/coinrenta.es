@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 const CONSENT_KEY = "coinrenta_cookie_consent_v2";
 const CONSENT_VERSION = "2026-09-14-v1";
 const CONSENT_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
-const PENDING_ENTRY_KEY = "coinrenta_pending_entry";
 
 type Consent = { analytics: boolean; savedAt: number; version: string };
 
@@ -64,18 +63,11 @@ export default function CookieConsent() {
     setAnalyticsChoice(current?.analytics ?? false);
     setHydrated(true);
 
-    let waitingForEntry = false;
-    try { waitingForEntry = window.sessionStorage.getItem(PENDING_ENTRY_KEY) === "1"; } catch {}
-    if (!waitingForEntry) setReady(true);
+    setReady(true);
 
-    const onEntryReady = () => {
-      setReady(true);
-      try { window.sessionStorage.removeItem(PENDING_ENTRY_KEY); } catch {}
-    };
     const onCookieSettings = (event: MouseEvent) => manageCookieSettings(event);
     document.addEventListener("click", onCookieSettings);
-    window.addEventListener("coinrenta-entry-ready", onEntryReady);
-    return () => { document.removeEventListener("click", onCookieSettings); window.removeEventListener("coinrenta-entry-ready", onEntryReady); };
+    return () => { document.removeEventListener("click", onCookieSettings); };
   }, []);
 
   function apply(analytics: boolean) {
