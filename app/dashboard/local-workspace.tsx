@@ -7,7 +7,8 @@ import { datasetToFifo, fetchConnectionDataset, mergeDatasets, type LocalDataset
 import type { ReviewIssue } from '@/lib/exchanges/canonicalize';
 
 export type LocalConnection = { id: string; label: string | null; provider_type: string | null; status: string | null; last_sync_at: string | null; last_sync_status: string | null; exchange: string; exchangeName: string };
-type Props = { userId: string; connections: LocalConnection[]; mode: 'renta' | 'movimientos' | 'fiscalidad' | 'resumen'; isPro: boolean; displayName?: string | null; year?: number };
+type Plan = 'free' | 'essential' | 'pro' | 'admin';
+type Props = { userId: string; connections: LocalConnection[]; mode: 'renta' | 'movimientos' | 'fiscalidad' | 'resumen'; isPro: boolean; plan?: Plan; displayName?: string | null; year?: number };
 
 type ReviewOverride = Partial<Pick<LocalMovement, 'transactionType' | 'baseAsset' | 'baseAmount' | 'quoteAsset' | 'quoteAmount' | 'feeAsset' | 'feeAmount' | 'price' | 'priceCurrency'>> & { targetMovementId: string; note?: string; resolvedAt: string };
 type Incident = { id: string; movementId: string | null; occurredAt: string | null; title: string; message: string; severity: 'warning' | 'blocking'; hint?: string; kind: 'parser' | 'fifo' | 'system'; issue?: ReviewIssue };
@@ -52,7 +53,7 @@ function loadOverrides(userId: string): Record<string, ReviewOverride> {
 }
 function saveOverrides(userId: string, value: Record<string, ReviewOverride>) { try { window.localStorage.setItem(`coinrenta-review-overrides:${userId}`, JSON.stringify(value)); } catch {} }
 
-export default function LocalWorkspace({ userId, connections, mode, isPro, displayName, year = new Date().getFullYear() }: Props) {
+export default function LocalWorkspace({ userId, connections, mode, isPro, plan = isPro ? 'pro' : 'free', displayName, year = new Date().getFullYear() }: Props) {
   const [datasets, setDatasets] = useState<LocalDataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(true);
@@ -104,7 +105,7 @@ export default function LocalWorkspace({ userId, connections, mode, isPro, displ
   const connectionCount = connections.length;
   if (loading || calculating) return <><WorkspaceStyles /><main className="dashboard-content workspace-page"><section className="panel-card workspace-loading" aria-busy="true" aria-live="polite"><div className="workspace-loading-inner"><div className="workspace-loading-logo" aria-hidden="true"/><div className="workspace-loading-kicker">COINRENTA · CONTROL FISCAL</div><div className="workspace-loading-title">Preparando tus datos fiscales</div><div className="workspace-loading-copy">Estamos cargando el histórico completo y verificando que las operaciones estén listas para el cálculo.</div><div className="workspace-loading-bar" aria-hidden="true"/><div className="workspace-loading-steps"><div className={`workspace-loading-step ${loadStage.includes('Cargando') || loadStage.includes('Leyendo') ? 'active' : ''}`}>1 · Histórico</div><div className={`workspace-loading-step ${loadStage.includes('Calculando') ? 'active' : ''}`}>2 · Comprobación</div><div className={`workspace-loading-step ${loadStage.includes('Calculando') && report ? 'active' : ''}`}>3 · Resultado</div></div><div className="workspace-loading-status"><span className="workspace-loading-dot"/>{loadStage}</div><div className="workspace-loading-note">No cierres la página mientras terminamos de preparar el ejercicio.</div></div></section></main></>;
   if (error) return <><WorkspaceStyles /><main className="dashboard-content workspace-page"><section className="panel-card"><div className="connection-error">{error}<div style={{ marginTop: 10 }}><Link href="/dashboard/exchanges">Revisar conexiones</Link></div></div></section></main></>;
-  return <><WorkspaceStyles />{mode === 'movimientos' ? <Movements movements={movements} isPro={isPro} /> : mode === 'fiscalidad' ? <Fiscality report={report} year={year} /> : mode === 'resumen' ? <Summary report={report} movements={movements} displayName={displayName} connectionCount={connectionCount} /> : <Renta report={report} year={year} isPro={isPro} movements={movements} overrides={overrides} userId={userId} onSaveOverride={(override) => { const next = { ...overrides, [override.targetMovementId]: override }; setOverrides(next); saveOverrides(userId, next); }} onRemoveOverride={(id) => { const next = { ...overrides }; delete next[id]; setOverrides(next); saveOverrides(userId, next); }} />}</>;
+  return <><WorkspaceStyles />{mode === 'movimientos' ? <Movements movements={movements} isPro={isPro} /> : mode === 'fiscalidad' ? <Fiscality report={report} year={year} /> : mode === 'resumen' ? <Summary report={report} movements={movements} displayName={displayName} connectionCount={connectionCount} /> : <Renta report={report} year={year} isPro={isPro} plan={plan} movements={movements} overrides={overrides} userId={userId} onSaveOverride={(override) => { const next = { ...overrides, [override.targetMovementId]: override }; setOverrides(next); saveOverrides(userId, next); }} onRemoveOverride={(id) => { const next = { ...overrides }; delete next[id]; setOverrides(next); saveOverrides(userId, next); }} />}</>;
 }
 
 function buildIncidents(movements: LocalMovement[], report: FifoReport | null, year: number): Incident[] {
@@ -124,7 +125,7 @@ function buildIncidents(movements: LocalMovement[], report: FifoReport | null, y
   return incidents;
 }
 
-function Renta({ report, year, isPro, movements, overrides, userId, onSaveOverride, onRemoveOverride }: { report: FifoReport | null; year: number; isPro: boolean; movements: LocalMovement[]; overrides: Record<string, ReviewOverride>; userId: string; onSaveOverride: (override: ReviewOverride) => void; onRemoveOverride: (id: string) => void }) {
+function Renta({ report, year, isPro, plan, movements, overrides, userId, onSaveOverride, onRemoveOverride }: { report: FifoReport | null; year: number; isPro: boolean; plan: Plan; movements: LocalMovement[]; overrides: Record<string, ReviewOverride>; userId: string; onSaveOverride: (override: ReviewOverride) => void; onRemoveOverride: (id: string) => void }) {
   const actionable = buildIncidents(movements, report, year).filter((item) => !overrides[item.movementId || '']).length;
   const currentYear = new Date().getFullYear(); const firstFiscalYear = 2018;
   const years = Array.from({ length: currentYear - firstFiscalYear + 1 }, (_, index) => currentYear - index);
@@ -133,22 +134,25 @@ function Renta({ report, year, isPro, movements, overrides, userId, onSaveOverri
     <section className="renta-hero panel-card"><div><span className="section-kicker">EJERCICIO FISCAL</span><h2>Informe fiscal {year}</h2><p>Cambio de ejercicio sobre el mismo histórico completo.</p></div><nav className="renta-year-switcher" aria-label="Ejercicio fiscal">{years.map((item)=><Link key={item} href={item===currentYear?'/dashboard/renta':`/dashboard/renta?year=${item}`} className={item===year?'selected':''}>{item}</Link>)}</nav></section>
     <section className="renta-stat-grid"><article className="stat-card"><span className="stat-label">Ganancia / pérdida</span><strong className={report && !report.gainKnown?'renta-number-warning':''}>{isPro?money(report?.gain):'Pro'}</strong><span className="stat-note">{isPro?(report?.gainKnown?'FIFO completo':'Resultado provisional'):'Resultado fiscal detallado disponible en Pro.'}</span></article><article className="stat-card"><span className="stat-label">Valor de transmisión</span><strong>{money(report?.proceeds)}</strong><span className="stat-note">Ventas y permutas</span></article><article className="stat-card"><span className="stat-label">Coste FIFO</span><strong>{money(report?.costBasis)}</strong><span className="stat-note">Lotes históricos</span></article><article className="stat-card"><span className="stat-label">Incidencias</span><strong>{actionable}</strong><span className="stat-note">Requieren revisión</span></article></section>
     <section className="renta-section panel-card"><div className="panel-head"><h3>Ganancias y pérdidas patrimoniales</h3><span className="renta-badge">EUR · FIFO</span></div><div className="renta-summary-grid"><div><small>Transmisiones / permutas</small><strong>{report?.disposals ?? 0}</strong></div><div><small>Ganancia calculada</small><strong>{isPro?money(report?.gain):'Pro'}</strong></div><div><small>Ingresos identificados</small><strong>{money(report?.incomeEur)}</strong></div><div><small>Comisiones fiat</small><strong>{money(report?.feesEur)}</strong></div></div></section>
-    <IncidentPanel year={year} movements={movements} report={report} overrides={overrides} userId={userId} onSaveOverride={onSaveOverride} onRemoveOverride={onRemoveOverride} />
+    <IncidentPanel year={year} movements={movements} report={report} plan={plan} overrides={overrides} userId={userId} onSaveOverride={onSaveOverride} onRemoveOverride={onRemoveOverride} />
   </main>;
 }
 
-function IncidentPanel({ year, movements, report, overrides, userId, onSaveOverride, onRemoveOverride }: { year: number; movements: LocalMovement[]; report: FifoReport | null; overrides: Record<string, ReviewOverride>; userId: string; onSaveOverride: (override: ReviewOverride) => void; onRemoveOverride: (id: string) => void }) {
+function IncidentPanel({ year, movements, report, plan, overrides, userId, onSaveOverride, onRemoveOverride }: { year: number; movements: LocalMovement[]; report: FifoReport | null; plan: Plan; overrides: Record<string, ReviewOverride>; userId: string; onSaveOverride: (override: ReviewOverride) => void; onRemoveOverride: (id: string) => void }) {
   const incidents = buildIncidents(movements, report, year);
   const [editing, setEditing] = useState<string | null>(null);
   const [selectedMovementId, setSelectedMovementId] = useState<string>('');
   const [type, setType] = useState('sell');
   const [asset, setAsset] = useState(''); const [amount, setAmount] = useState(''); const [quoteAsset, setQuoteAsset] = useState(''); const [quoteAmount, setQuoteAmount] = useState(''); const [price, setPrice] = useState(''); const [priceCurrency, setPriceCurrency] = useState('EUR'); const [note, setNote] = useState('');
   const visible = incidents.filter((incident) => !overrides[incident.movementId || '']);
+  const isProPlan = plan === 'pro' || plan === 'admin';
+  const isEssentialPlan = plan === 'essential';
 
   function openEditor(incident: Incident) {
     const target = movements.find((movement) => movement.id === incident.movementId) || movements.find((movement) => movement.classification === 'needs_review') || movements[0];
     setEditing(incident.id); setSelectedMovementId(target?.id || ''); setType(target?.transactionType || 'sell'); setAsset(target?.baseAsset || ''); setAmount(target?.baseAmount == null ? '' : String(Math.abs(target.baseAmount))); setQuoteAsset(target?.quoteAsset || ''); setQuoteAmount(target?.quoteAmount == null ? '' : String(Math.abs(target.quoteAmount))); setPrice(target?.price == null ? '' : String(target.price)); setPriceCurrency(target?.priceCurrency || 'EUR'); setNote(incident.message);
   }
+
   function save() {
     if (!selectedMovementId) return;
     const numeric = (value: string) => value.trim() === '' ? null : Number(value.replace(',', '.'));
@@ -157,7 +161,91 @@ function IncidentPanel({ year, movements, report, overrides, userId, onSaveOverr
     setEditing(null);
   }
 
-  return <section className="panel-card incident-panel"><div className="panel-head"><div><span className="section-kicker">CONTROL DE CALIDAD</span><h3>Incidencias fiscales</h3></div><span className="incident-count">{visible.length} pendientes</span></div><p className="workspace-subtitle">El parser identifica anomalías antes del cálculo FIFO. Cada incidencia puede corregirse manualmente y queda guardada en este dispositivo.</p>{visible.length===0?<div className="incident-empty" style={{ marginTop: 12 }}>No hay incidencias pendientes para este ejercicio. Las operaciones ya pueden entrar en el cálculo con los datos normalizados.</div>:<div className="incident-list">{visible.map((incident)=>{const movement=incident.movementId?movements.find((item)=>item.id===incident.movementId):null; return <article className="incident-item" key={incident.id}><div className="incident-head"><div><div className="incident-title">{incident.title}</div><div className="incident-message">{incident.message}</div></div><span className="incident-severity">{incident.severity==='blocking'?'Bloqueante':'Revisión'}</span></div><div className="incident-meta">{movement&&<span className="incident-chip">{date(movement.occurredAt)} · {movement.transactionType} · {movement.baseAsset||'sin activo'} · {qty(movement.baseAmount)}</span>}{movement&&<span className="incident-chip">Origen: {movement.originalType||'desconocido'}</span>}<span className="incident-chip">{incident.kind}</span></div><div className="incident-actions"><button type="button" className="incident-btn primary" onClick={()=>openEditor(incident)}>Revisar / corregir</button>{movement&&<Link className="incident-btn" href="#historico">Ir al movimiento</Link>}</div>{editing===incident.id&&<div className="incident-editor"><div className="incident-form"><div className="incident-field full"><label>Movimiento al que corresponde</label><select value={selectedMovementId} onChange={(event)=>setSelectedMovementId(event.target.value)}>{movements.map((item)=><option key={item.id} value={item.id}>{date(item.occurredAt)} · {item.transactionType} · {item.baseAsset||'—'} · {qty(item.baseAmount)}</option>)}</select></div><div className="incident-field"><label>Tipo fiscal</label><select value={type} onChange={(event)=>setType(event.target.value)}>{['buy','sell','trade','deposit','withdrawal','transfer_in','transfer_out','reward','interest','airdrop','cashback','income','expense','fee','other'].map((item)=><option key={item} value={item}>{item}</option>)}</select></div><div className="incident-field"><label>Activo</label><input value={asset} onChange={(event)=>setAsset(event.target.value)} placeholder="BTC" /></div><div className="incident-field"><label>Cantidad activo</label><input value={amount} onChange={(event)=>setAmount(event.target.value)} inputMode="decimal" placeholder="0,00" /></div><div className="incident-field"><label>Contrapartida</label><input value={quoteAsset} onChange={(event)=>setQuoteAsset(event.target.value)} placeholder="EUR / USDT" /></div><div className="incident-field"><label>Cantidad contrapartida</label><input value={quoteAmount} onChange={(event)=>setQuoteAmount(event.target.value)} inputMode="decimal" placeholder="0,00" /></div><div className="incident-field"><label>Precio unitario</label><input value={price} onChange={(event)=>setPrice(event.target.value)} inputMode="decimal" placeholder="0,00" /></div><div className="incident-field"><label>Divisa precio</label><input value={priceCurrency} onChange={(event)=>setPriceCurrency(event.target.value)} placeholder="EUR" /></div><div className="incident-field full"><label>Nota</label><input value={note} onChange={(event)=>setNote(event.target.value)} placeholder="Qué se ha corregido y por qué" /></div></div><div className="incident-actions"><button type="button" className="incident-btn primary" onClick={save}>Guardar corrección</button><button type="button" className="incident-btn" onClick={()=>setEditing(null)}>Cancelar</button>{incident.movementId&&overrides[incident.movementId]&&<button type="button" className="incident-btn" onClick={()=>onRemoveOverride(incident.movementId as string)}>Quitar corrección</button>}</div><div className="incident-help">La corrección se almacena localmente y se aplica al recálculo FIFO. No modifica el CSV original.</div></div>}</article>;})}</div>}</section>;
+  return <section className="panel-card incident-panel">
+    <div className="panel-head">
+      <div><span className="section-kicker">CONTROL DE CALIDAD</span><h3>Incidencias fiscales</h3></div>
+      <span className="incident-count">{visible.length} pendientes</span>
+    </div>
+    <p className="workspace-subtitle">El parser identifica anomalías antes del cálculo FIFO. La información disponible depende de tu plan.</p>
+
+    {visible.length === 0
+      ? <div className="incident-empty" style={{ marginTop: 12 }}>No hay incidencias pendientes para este ejercicio. Las operaciones ya pueden entrar en el cálculo con los datos normalizados.</div>
+      : <div className="incident-list">
+          {visible.map((incident) => {
+            const movement = incident.movementId ? movements.find((item) => item.id === incident.movementId) : null;
+
+            if (!isProPlan && !isEssentialPlan) {
+              return <article className="incident-item incident-item-blurred" key={incident.id}>
+                <div className="incident-blur-content" aria-hidden="true">
+                  <div className="incident-title">Incidencia fiscal detectada</div>
+                  <div className="incident-message">Información de la incidencia y operaciones afectadas</div>
+                  <div className="incident-meta"><span className="incident-chip">Fecha · operación · activo</span><span className="incident-chip">Detalles fiscales</span></div>
+                </div>
+                <div className="incident-lock-overlay">
+                  <strong>Detalles bloqueados</strong>
+                  <span>Consulta los detalles con el plan Pro.</span>
+                  <Link className="quality-action primary" href="/dashboard/suscripcion">Ver Pro</Link>
+                </div>
+              </article>;
+            }
+
+            if (isEssentialPlan) {
+              return <article className="incident-item" key={incident.id}>
+                <div className="incident-head">
+                  <div><div className="incident-title">{incident.title}</div><div className="incident-message">Se ha detectado una incidencia que requiere revisión.</div></div>
+                  <span className="incident-severity">{incident.severity === 'blocking' ? 'Bloqueante' : 'Revisión'}</span>
+                </div>
+                <div className="incident-meta">
+                  <span className="incident-chip">Tipo: {incident.kind}</span>
+                  <span className="incident-chip">Detalle de operaciones disponible en Pro</span>
+                </div>
+                <div className="incident-actions">
+                  <Link className="incident-btn primary" href="/dashboard/suscripcion">Ver Pro para revisar</Link>
+                </div>
+              </article>;
+            }
+
+            return <article className="incident-item" key={incident.id}>
+              <div className="incident-head">
+                <div><div className="incident-title">{incident.title}</div><div className="incident-message">{incident.message}</div></div>
+                <span className="incident-severity">{incident.severity === 'blocking' ? 'Bloqueante' : 'Revisión'}</span>
+              </div>
+              <div className="incident-meta">
+                {movement && <span className="incident-chip">{date(movement.occurredAt)} · {movement.transactionType} · {movement.baseAsset || 'sin activo'} · {qty(movement.baseAmount)}</span>}
+                {movement && <span className="incident-chip">Origen: {movement.originalType || 'desconocido'}</span>}
+                <span className="incident-chip">{incident.kind}</span>
+              </div>
+              <div className="incident-actions">
+                <button type="button" className="incident-btn primary" onClick={() => openEditor(incident)}>Revisar / corregir</button>
+                {movement && <Link className="incident-btn" href="#historico">Ir al movimiento</Link>}
+              </div>
+
+              {editing === incident.id && <div className="incident-editor">
+                <div className="incident-form">
+                  <div className="incident-field full"><label>Movimiento al que corresponde</label><select value={selectedMovementId} onChange={(event) => setSelectedMovementId(event.target.value)}>{movements.map((item) => <option key={item.id} value={item.id}>{date(item.occurredAt)} · {item.transactionType} · {item.baseAsset || '—'} · {qty(item.baseAmount)}</option>)}</select></div>
+                  <div className="incident-field"><label>Tipo fiscal</label><select value={type} onChange={(event) => setType(event.target.value)}>{['buy','sell','trade','deposit','withdrawal','transfer_in','transfer_out','reward','interest','airdrop','cashback','income','expense','fee','other'].map((item) => <option key={item} value={item}>{item}</option>)}</select></div>
+                  <div className="incident-field"><label>Activo</label><input value={asset} onChange={(event) => setAsset(event.target.value)} placeholder="BTC" /></div>
+                  <div className="incident-field"><label>Cantidad activo</label><input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="0,00" /></div>
+                  <div className="incident-field"><label>Contrapartida</label><input value={quoteAsset} onChange={(event) => setQuoteAsset(event.target.value)} placeholder="EUR / USDT" /></div>
+                  <div className="incident-field"><label>Cantidad contrapartida</label><input value={quoteAmount} onChange={(event) => setQuoteAmount(event.target.value)} inputMode="decimal" placeholder="0,00" /></div>
+                  <div className="incident-field"><label>Precio unitario</label><input value={price} onChange={(event) => setPrice(event.target.value)} inputMode="decimal" placeholder="0,00" /></div>
+                  <div className="incident-field"><label>Divisa precio</label><input value={priceCurrency} onChange={(event) => setPriceCurrency(event.target.value)} placeholder="EUR" /></div>
+                  <div className="incident-field full"><label>Nota</label><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Qué se ha corregido y por qué" /></div>
+                </div>
+                <div className="incident-actions">
+                  <button type="button" className="incident-btn primary" onClick={save}>Guardar corrección</button>
+                  <button type="button" className="incident-btn" onClick={() => setEditing(null)}>Cancelar</button>
+                  {incident.movementId && overrides[incident.movementId] && <button type="button" className="incident-btn" onClick={() => onRemoveOverride(incident.movementId as string)}>Quitar corrección</button>}
+                </div>
+                <div className="incident-help">La corrección se almacena localmente y se aplica al recálculo FIFO. No modifica el CSV original.</div>
+              </div>}
+            </article>;
+          })}
+        </div>}
+
+    {isEssentialPlan && visible.length > 0 && <div className="incident-help">El plan Esencial muestra una vista general de las incidencias. Para consultar la operación concreta, los datos afectados y corregirla, necesitas Pro.</div>}
+    {!isProPlan && !isEssentialPlan && visible.length > 0 && <div className="incident-help">Las incidencias detectadas se muestran de forma protegida. El detalle está disponible en Pro.</div>}
+  </section>;
 }
 
 function Movements({ movements, isPro }: { movements: LocalMovement[]; isPro: boolean }) { return <main className="dashboard-content workspace-page"><header className="app-topbar"><div><span className="topbar-kicker">CoinRenta</span><h1>Movimientos</h1><p className="workspace-subtitle">{movements.length.toLocaleString('es-ES')} movimientos disponibles desde el histórico local.</p></div></header><section id="historico" className="panel-card"><div className="panel-head"><div><span className="section-kicker">HISTÓRICO</span><h3>Movimientos normalizados</h3></div></div>{movements.length?<div className="table-wrap"><table className="workspace-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cantidad</th><th>Contrapartida</th><th>Fee</th><th>Origen</th></tr></thead><tbody>{movements.slice().reverse().map((movement)=><tr key={movement.id}><td>{date(movement.occurredAt)}</td><td><span className="movement-type">{movement.transactionType}</span>{movement.originalType&&<small className="table-subtext">Origen: {movement.originalType}</small>}</td><td><strong>{movement.baseAsset||'—'}</strong></td><td>{isPro?`${qty(movement.baseAmount)} ${movement.baseAsset||''}`:'***'}</td><td>{isPro?`${qty(movement.quoteAmount)} ${movement.quoteAsset||movement.priceCurrency||''}`:'***'}</td><td>{isPro?`${qty(movement.feeAmount)} ${movement.feeAsset||''}`:'***'}</td><td>{movement.exchange}</td></tr>)}</tbody></table></div>:<div className="renta-empty">No hay movimientos en el histórico.</div>}</section></main>; }
