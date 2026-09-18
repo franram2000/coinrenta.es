@@ -23,7 +23,7 @@ export default function UserActions({ userId, role, isActive, label, isSelf }: P
 
   function toggleActive() {
     if (isSelf) return;
-    run(adminUpdateUser, { user_id: userId, role: role || "free", is_active: isActive ? "false" : "true" }, isActive ? "Acceso desactivado." : "Acceso reactivado.");
+    run(adminUpdateUser, { user_id: userId, role: normalizedRole, is_active: isActive ? "false" : "true" }, isActive ? "Acceso desactivado." : "Acceso reactivado.");
   }
 
   function saveRole(event: FormEvent<HTMLFormElement>) {
