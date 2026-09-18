@@ -29,5 +29,5 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  return <div className="app-shell dashboard-pro-shell"><DashboardSidebar role={profile?.role || "free"} /><main className="app-main"><DashboardLoadingGate />{children}</main></div>;
+  return <div className="app-shell dashboard-pro-shell"><DashboardSidebar role={profile?.role || "user"} /><main className="app-main"><DashboardLoadingGate />{children}</main></div>;
 }
