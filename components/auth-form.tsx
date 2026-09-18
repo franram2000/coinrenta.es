@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import CoinRentaLoader from "@/components/coinrenta-loader";
+import AuthBrandPanel from "@/components/auth-brand-panel";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "register";
@@ -46,18 +47,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       <div className="auth-glow auth-glow-one" aria-hidden="true" />
       <div className="auth-glow auth-glow-two" aria-hidden="true" />
       <section className="auth-layout">
-        <div className="auth-brand-panel">
-          <div className="auth-brand-stage" aria-hidden="true">
-            <span className="auth-brand-ring r1" />
-            <span className="auth-brand-ring r2" />
-            <span className="auth-brand-ring r3" />
-            <span className="auth-brand-orbit" />
-            <img src="/logo.png" alt="" className="auth-brand-logo" />
-          </div>
-          <h1 className="auth-brand-wordmark"><span className="coin">Coin</span><span className="renta">Renta</span></h1>
-          <div className="auth-brand-copy"><span className="auth-eyebrow">Gestión cripto para España</span><h2>{isRegister ? "Empieza a controlar tu cartera." : "Vuelve a tenerlo todo bajo control."}</h2><p>{isRegister ? "Centraliza tus exchanges, movimientos y datos fiscales en un único espacio." : "Accede a CoinRenta para consultar tus activos, operaciones y preparación de Renta."}</p></div>
-          <div className="auth-trust-row"><span>✓ Datos centralizados</span><span>✓ Enfoque fiscal español</span><span>✓ Acceso seguro</span></div>
-        </div>
+        <AuthBrandPanel variant={isRegister ? "register" : "login"} />
         <div className="auth-card">
           <div className="auth-card-head"><div><span className="auth-card-kicker">CoinRenta</span><h2>{isRegister ? "Crear cuenta" : "Iniciar sesión"}</h2><p>{isRegister ? "Crea tu cuenta para empezar." : "Introduce tus credenciales para continuar."}</p></div><span className="auth-secure" aria-label="Conexión segura">⌁</span></div>
           <form className="auth-form" onSubmit={handleSubmit} noValidate>
