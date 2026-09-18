@@ -313,3 +313,18 @@ button, a { -webkit-tap-highlight-color: transparent; }
   html { scroll-behavior:auto; }
   *, *::before, *::after { transition:none !important; animation:none !important; }
 }
+
+
+/* Configuration switches */
+.settings-option-list { display:grid; gap:0; margin-top:18px; }
+.settings-option { display:flex; align-items:center; justify-content:space-between; gap:22px; padding:15px 0; border-top:1px solid rgba(255,255,255,.06); color:#D7E0EA; cursor:pointer; }
+.settings-option:first-child { border-top:0; }
+.settings-option > span { display:grid; gap:4px; min-width:0; }
+.settings-option strong { font-size:13px; }
+.settings-option small { color:#8190A5; font-size:12px; line-height:1.45; }
+.settings-option select { min-width:135px; padding:9px 11px; min-height:40px; border:1px solid rgba(255,255,255,.11); border-radius:9px; background:#0A1422; color:#DCE5EE; font-size:13px; }
+.settings-option input[type="checkbox"] { appearance:none; -webkit-appearance:none; width:42px; height:24px; min-width:42px; padding:0; margin:0; position:relative; flex:0 0 42px; border:0; border-radius:999px; outline:none; background:#26354A; cursor:pointer; box-shadow:none; }
+.settings-option input[type="checkbox"]::after { content:""; position:absolute; width:16px; height:16px; left:4px; top:4px; border-radius:50%; background:#A5B3C4; transition:transform .15s ease, background .15s ease; }
+.settings-option input[type="checkbox"]:checked { background:#0FA7A0; }
+.settings-option input[type="checkbox"]:checked::after { transform:translateX(18px); background:#fff; }
+.settings-option input[type="checkbox"]:focus-visible { box-shadow:0 0 0 3px rgba(15,167,160,.16); }
