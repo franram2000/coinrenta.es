@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     const exchange = Array.isArray(row.exchanges) ? row.exchanges[0] : row.exchanges;
     return { id: String(row.id), label: row.label || null, exchangeName: String(exchange?.name || 'Exchange'), status: row.status || null, lastSyncAt: row.last_sync_at || null };
   });
-  const role = profile?.role || 'free';
+  const role = profile?.role || 'user';
   const plan = role === 'admin' ? 'admin' : (profile?.subscription_plan || 'free') as 'free' | 'essential' | 'pro';
   return <SummaryDashboardV2 userId={user.id} connections={connections} displayName={profile?.display_name || null} plan={plan} />;
 }
