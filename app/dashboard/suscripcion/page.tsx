@@ -33,7 +33,7 @@ export default async function SubscriptionPage({ searchParams }: { searchParams:
     await reconcileSubscription(user.id);
     const refreshed = await supabase
       .from("profiles")
-      .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,role,paddle_customer_id,paddle_subscription_id")
+      .select("subscription_plan,subscription_interval,subscription_status,subscription_current_period_end,subscription_complimentary,role,paddle_customer_id,paddle_subscription_id")
       .eq("id", user.id)
       .maybeSingle();
     if (refreshed.data) profile = refreshed.data;
