@@ -72,7 +72,7 @@ export default function CookieConsent() {
       setReady(true);
       try { window.sessionStorage.removeItem(PENDING_ENTRY_KEY); } catch {}
     };
-    const onCookieSettings = () => manageCookieSettings();
+    const onCookieSettings = (event: MouseEvent) => manageCookieSettings(event);
     document.addEventListener("click", onCookieSettings);
     window.addEventListener("coinrenta-entry-ready", onEntryReady);
     return () => { document.removeEventListener("click", onCookieSettings); window.removeEventListener("coinrenta-entry-ready", onEntryReady); };
