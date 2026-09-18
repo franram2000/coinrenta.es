@@ -191,6 +191,7 @@ export async function syncSubscription(subscription: any, context: string, force
   const update: Record<string, any> = {
     paddle_customer_id: state.customerId,
     paddle_subscription_id: state.status === "canceled" ? null : state.subscriptionId,
+    subscription_complimentary: false,
     subscription_plan: state.plan || "free",
     subscription_interval: state.interval,
     subscription_status: state.status,
@@ -227,7 +228,7 @@ export async function reconcileSubscription(userId: string) {
   const db = createAdmin();
   const { data: profile, error: profileError } = await db
     .from("profiles")
-    .select("paddle_customer_id,paddle_subscription_id,paddle_transaction_id,subscription_plan,subscription_status")
+    .select("paddle_customer_id,paddle_subscription_id,paddle_transaction_id,subscription_plan,subscription_status,subscription_complimentary")
     .eq("id", userId)
     .maybeSingle();
   if (profileError) throw new Error(`Supabase reconciliation profile lookup failed: ${profileError.message}`);
@@ -236,6 +237,23 @@ export async function reconcileSubscription(userId: string) {
   let customerIdValue = text(profile.paddle_customer_id);
   const storedSubscriptionId = text(profile.paddle_subscription_id);
   const storedTransactionId = text(profile.paddle_transaction_id);
+
+  // Plans granted manually from the admin panel are intentionally not reconciled
+  // against Paddle until the user starts a real Paddle subscription.
+  if (
+    profile.subscription_complimentary
+    && !customerIdValue
+    && !storedSubscriptionId
+    && !storedTransactionId
+  ) {
+    return {
+      found: true as const,
+      subscription: null,
+      plan: profile.subscription_plan || "free",
+      status: profile.subscription_status || "active",
+      complimentary: true as const,
+    };
+  }
 
   // After checkout, the transaction ID is stored immediately. Use it as the
   // primary reconciliation anchor so a successful payment can provision the
