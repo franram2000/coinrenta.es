@@ -461,6 +461,31 @@
   backdrop-filter:blur(7px);
   -webkit-backdrop-filter:blur(7px);
 }
+
+/* One horizontal content frame across every dashboard section. */
+.dashboard-pro-shell .dashboard-content,
+.dashboard-pro-shell .dashboard-modern-content,
+.dashboard-pro-shell .reports-page,
+.dashboard-pro-shell .profile-page,
+.dashboard-pro-shell .web-settings-page,
+.dashboard-pro-shell .settings-page,
+.dashboard-pro-shell .help-page,
+.dashboard-pro-shell .renta-page,
+.dashboard-pro-shell .workspace-page,
+.dashboard-pro-shell .users-content{
+  width:100%;
+  max-width:none;
+  box-sizing:border-box;
+}
+.dashboard-pro-shell .profile-page,
+.dashboard-pro-shell .web-settings-page{
+  margin-left:0;
+  margin-right:0;
+}
+.dashboard-pro-shell .reports-page{
+  margin-left:0;
+  margin-right:0;
+}
 @media(max-width:760px){
   .dashboard-pro-shell .app-topbar{
     position:relative;
