@@ -131,3 +131,57 @@
 @media(prefers-reduced-motion:reduce) {
   .landing-v2 .feature-icon svg { transition:none; }
 }
+
+
+/* Fiscal landing update — remove portfolio-management framing */
+.landing-v2 .tax-summary-visual .stack-front {
+  min-height: 285px;
+}
+.landing-v2 .tax-summary-visual .stack-front-head i {
+  color:#68eee5;
+}
+.landing-v2 .tax-check-list {
+  position:relative;
+  z-index:2;
+  display:grid;
+  gap:8px;
+  margin-top:18px;
+}
+.landing-v2 .tax-check-list div {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#91a1b5;
+  font-size:9px;
+  line-height:1.3;
+}
+.landing-v2 .tax-check-list span {
+  width:17px;
+  height:17px;
+  display:grid;
+  place-items:center;
+  flex:0 0 17px;
+  border-radius:5px;
+  background:rgba(15,167,160,.10);
+  color:#68eee5;
+  font-size:9px;
+  font-weight:900;
+}
+.landing-v2 .tax-check-list div:last-child {
+  color:#c2ceda;
+}
+.landing-v2 .tax-check-list div:last-child span {
+  background:rgba(104,238,229,.08);
+}
+@media(max-width:650px) {
+  .landing-v2 .tax-summary-visual .stack-front {
+    min-height:245px;
+  }
+  .landing-v2 .tax-check-list {
+    gap:6px;
+    margin-top:14px;
+  }
+  .landing-v2 .tax-check-list div {
+    font-size:8px;
+  }
+}
