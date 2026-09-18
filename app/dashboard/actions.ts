@@ -277,12 +277,17 @@ export async function adminDeleteUser(formData: FormData) {
     }
   }
 
-  for (const table of ["balance_snapshots", "transactions", "imports"]) {
+  for (const table of ["balance_snapshots", "transactions"]) {
     const query = admin.from(table).delete().eq("user_id", targetId);
     const { error } = accountIds.length
       ? await query.in("account_id", accountIds)
       : await query;
     if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+  }
+
+  {
+    const { error } = await admin.from("imports").delete().eq("user_id", targetId);
+    if (error) throw new Error(`No se pudieron eliminar los imports del usuario: ${error.message}`);
   }
 
   if (accountIds.length) {
