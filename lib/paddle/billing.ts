@@ -264,6 +264,7 @@ export async function reconcileSubscription(userId: string) {
     const transactionSubscriptionId = subscriptionId(transaction);
 
     if (transactionCustomerId) customerIdValue = transactionCustomerId;
+    if (!transactionSubscriptionId && profile.subscription_complimentary) return { found: true as const, subscription: null, plan: profile.subscription_plan || "free", status: profile.subscription_status || "active", complimentary: true as const };
 
     if (transactionSubscriptionId) {
       const subscription = await paddleGet<{ data?: any }>(
