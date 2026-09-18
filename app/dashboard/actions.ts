@@ -171,19 +171,68 @@ export async function deleteOwnAccount(formData: FormData) {
 }
 
 export async function adminUpdateUser(formData: FormData) {
-  const { supabase, user } = await requireAdmin(); const targetId = String(formData.get("user_id") || "").trim(); const role = String(formData.get("role") || "free").trim(); const isActive = String(formData.get("is_active") || "true") === "true";
-  if (!targetId) throw new Error("Usuario no encontrado"); if (!["free", "pro", "admin"].includes(role)) throw new Error("Plan/rol no válido");
-  if (targetId === user.id && (role !== "admin" || !isActive)) throw new Error("No puedes quitarte o desactivar tus propios permisos de administrador.");
-  const { data: target, error: targetError } = await supabase.from("profiles").select("id,role,is_active").eq("id", targetId).maybeSingle();
-  if (targetError) throw new Error(targetError.message); if (!target) throw new Error("El usuario no existe.");
-  if (target.role === "admin" && (role !== "admin" || !isActive)) {
-    const { count, error: countError } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin").eq("is_active", true);
-    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`); if ((count ?? 0) <= 1) throw new Error("Debe existir al menos un administrador activo.");
-  }
-  const { error } = await supabase.from("profiles").update({ role, is_active: isActive }).eq("id", targetId); if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
-  revalidatePath("/dashboard/usuarios"); revalidatePath("/dashboard");
-}
+  const { supabase, user } = await requireAdmin();
+  const targetId = String(formData.get("user_id") || "").trim();
+  const role = String(formData.get("role") || "user").trim();
+  const subscriptionPlan = String(formData.get("subscription_plan") || "free").trim();
+  const isActive = String(formData.get("is_active") || "true") === "true";
 
+  if (!targetId) throw new Error("Usuario no encontrado.");
+  if (![ "user", "admin" ].includes(role)) throw new Error("Rol no válido.");
+  if (![ "free", "essential", "pro" ].includes(subscriptionPlan)) throw new Error("Suscripción no válida.");
+
+  if (targetId === user.id && (role !== "admin" || !isActive)) {
+    throw new Error("No puedes quitarte o desactivar tus propios permisos de administrador.");
+  }
+
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("id,role,is_active,subscription_plan,subscription_status,paddle_subscription_id")
+    .eq("id", targetId)
+    .maybeSingle();
+  if (targetError) throw new Error(targetError.message);
+  if (!target) throw new Error("El usuario no existe.");
+
+  if (target.role === "admin" && (role !== "admin" || !isActive)) {
+    const { count, error: countError } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("is_active", true);
+    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`);
+    if ((count ?? 0) <= 1) throw new Error("Debe existir al menos un administrador activo.");
+  }
+
+  const hasActivePaddleSubscription =
+    Boolean(target.paddle_subscription_id) &&
+    ["active", "trialing", "past_due", "paused"].includes(String(target.subscription_status || ""));
+
+  if (hasActivePaddleSubscription && subscriptionPlan !== (target.subscription_plan || "free")) {
+    throw new Error("Este usuario tiene una suscripción de Paddle activa. Cambia su plan desde Paddle para no alterar su facturación.");
+  }
+
+  const update: Record<string, unknown> = {
+    role,
+    is_active: isActive,
+  };
+
+  if (!hasActivePaddleSubscription) {
+    update.subscription_plan = subscriptionPlan;
+    update.subscription_complimentary = subscriptionPlan !== "free";
+    update.subscription_status = subscriptionPlan === "free" ? null : "active";
+    update.subscription_interval = null;
+    update.subscription_current_period_end = null;
+    update.paddle_customer_id = null;
+    update.paddle_subscription_id = null;
+    update.paddle_transaction_id = null;
+  }
+
+  const { error } = await supabase.from("profiles").update(update).eq("id", targetId);
+  if (error) throw new Error(`No se pudo actualizar el usuario: ${error.message}`);
+
+  revalidatePath("/dashboard/usuarios");
+  revalidatePath("/dashboard");
+}
 export async function adminDeleteUser(formData: FormData) {
   const { supabase, user } = await requireAdmin();
   const targetId = String(formData.get("user_id") || "").trim();
