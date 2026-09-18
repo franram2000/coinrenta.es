@@ -239,28 +239,53 @@ export async function adminDeleteUser(formData: FormData) {
 
   const accountIds = (accounts || []).map((account: { id: string }) => account.id);
 
-  if (accountIds.length) {
-    for (const table of ["tax_disposals", "tax_lots", "transaction_legs"]) {
-      const { error } = await admin.from(table).delete().in(
-        table === "transaction_legs" ? "transaction_id" : "id",
-        table === "transaction_legs"
-          ? ((await admin.from("transactions").select("id").eq("user_id", targetId)).data || []).map((row: { id: string }) => row.id)
-          : []
-      );
+  const { data: transactions, error: transactionsLookupError } = await admin
+    .from("transactions")
+    .select("id")
+    .eq("user_id", targetId);
+  if (transactionsLookupError) throw new Error(`No se pudieron preparar los movimientos del usuario: ${transactionsLookupError.message}`);
+
+  const transactionIds = (transactions || []).map((row: { id: string }) => row.id);
+
+  if (transactionIds.length) {
+    for (const table of ["transaction_legs", "tax_disposals"]) {
+      const { error } = await admin
+        .from(table)
+        .delete()
+        .eq("user_id", targetId);
       if (error && !String(error.message).toLowerCase().includes("does not exist")) {
         throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
       }
     }
 
-    for (const table of ["balance_snapshots", "transactions", "imports"]) {
-      const { error } = await admin
-        .from(table)
-        .delete()
-        .eq("user_id", targetId)
-        .in("account_id", accountIds);
-      if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+    const { error: legsError } = await admin
+      .from("transaction_legs")
+      .delete()
+      .in("transaction_id", transactionIds);
+    if (legsError && !String(legsError.message).toLowerCase().includes("does not exist")) {
+      throw new Error(`No se pudieron eliminar los detalles de movimientos: ${legsError.message}`);
     }
+  }
 
+  for (const table of ["tax_lots", "tax_years"]) {
+    const { error } = await admin
+      .from(table)
+      .delete()
+      .eq("user_id", targetId);
+    if (error && !String(error.message).toLowerCase().includes("does not exist")) {
+      throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+    }
+  }
+
+  for (const table of ["balance_snapshots", "transactions", "imports"]) {
+    const query = admin.from(table).delete().eq("user_id", targetId);
+    const { error } = accountIds.length
+      ? await query.in("account_id", accountIds)
+      : await query;
+    if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+  }
+
+  if (accountIds.length) {
     const { error: accountDeleteError } = await admin
       .from("accounts")
       .delete()
