@@ -219,11 +219,13 @@ export default function Home() {
                   )}
                   {card.icon === "normalize" && (
                     <svg viewBox="0 0 48 48" role="presentation">
-                      <path d="M8 14h32" />
-                      <path d="M14 24h20" />
-                      <path d="M20 34h8" />
-                      <path d="M34 14l6 0-6 6" />
-                      <path d="M14 34l-6 0 6-6" />
+                      <path d="M6 10h17" />
+                      <path d="M6 18h13" />
+                      <path d="M6 26h19" />
+                      <path d="M26 18h4" />
+                      <path d="m28 13 5 5-5 5" />
+                      <path d="M35 14h7" />
+                      <path d="M35 26h10" />
                     </svg>
                   )}
                   {card.icon === "prepare" && (
