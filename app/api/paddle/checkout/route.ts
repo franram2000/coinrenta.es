@@ -30,12 +30,12 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("paddle_customer_id,paddle_subscription_id,subscription_status")
+    .select("paddle_customer_id,paddle_subscription_id,subscription_status,subscription_complimentary")
     .eq("id", user.id)
     .maybeSingle();
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
-  if (["active", "trialing", "past_due", "paused"].includes(String(profile?.subscription_status))) {
+  if (!profile?.subscription_complimentary && ["active", "trialing", "past_due", "paused"].includes(String(profile?.subscription_status))) {
     return NextResponse.json({ error: "Ya tienes una suscripción de Paddle. Usa 'Gestionar suscripción' para cambiar de plan o periodicidad." }, { status: 409 });
   }
 
