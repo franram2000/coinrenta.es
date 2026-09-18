@@ -16,6 +16,7 @@ type UserRow = {
   display_name: string | null;
   role: string | null;
   subscription_plan: string | null;
+  subscription_complimentary: boolean | null;
   is_active: boolean | null;
   created_at: string;
 };
@@ -33,8 +34,9 @@ function roleClass(role: string | null) {
   return role === "admin" ? "admin" : "user";
 }
 
-function subscriptionLabel(plan: string | null) {
-  return plan === "pro" ? "Pro" : plan === "essential" ? "Esencial" : "Free";
+function subscriptionLabel(plan: string | null, complimentary = false) {
+  if (plan === "pro") return complimentary ? "Pro · cortesía" : "Pro";
+  return plan === "essential" ? "Esencial" : "Free";
 }
 
 function subscriptionClass(plan: string | null) {
@@ -64,7 +66,7 @@ export default async function UsersPage() {
   // Los administradores se autorizan mediante RLS; no dependemos de una service role key en Vercel.
   const { data, error } = await supabase
     .from("profiles")
-    .select("id,email,display_name,role,is_active,created_at")
+    .select("id,email,display_name,role,subscription_plan,subscription_complimentary,is_active,created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(`No se pudieron cargar los usuarios: ${error.message}`);
 
@@ -98,9 +100,9 @@ export default async function UsersPage() {
         <div className="users-directory-head"><div><h2>Directorio de usuarios</h2><p>Consulta y modifica el plan o el acceso de cada cuenta.</p></div><div className="users-directory-count"><b>{active}</b> activos · {inactive} inactivos</div></div>
         {users.length ? <>
           <div className="users-table-wrap"><table className="users-table"><thead><tr><th>Usuario</th><th>Rol</th><th>Suscripción</th><th>Estado</th><th>Alta</th><th style={{textAlign:"right"}}>Gestionar</th></tr></thead><tbody>
-            {users.map((item) => { const label = item.display_name || item.email?.split("@")[0] || "Usuario"; const isActive = item.is_active !== false; return <tr key={item.id}><td><div className="user-cell"><span className="user-avatar">{initials(label)}</span><div className="user-meta"><strong className="user-name">{label}</strong><small className="user-email">{item.email || item.id}</small></div></div></td><td><span className={`user-role user-role-${roleClass(item.role)}`}>{roleLabel(item.role)}</span></td><td><span className={`user-role user-subscription-${subscriptionClass(item.subscription_plan)}`}>{subscriptionLabel(item.subscription_plan)}</span></td><td><span className={`user-status ${isActive ? "user-status-active" : "user-status-inactive"}`}>{isActive ? "Activo" : "Inactivo"}</span></td><td><span className="user-date">{formatDate(item.created_at)}</span></td><td><UserActions userId={item.id} role={item.role} subscriptionPlan={item.subscription_plan} isActive={isActive} label={label} isSelf={item.id === user.id} /></td></tr>; })}
+            {users.map((item) => { const label = item.display_name || item.email?.split("@")[0] || "Usuario"; const isActive = item.is_active !== false; return <tr key={item.id}><td><div className="user-cell"><span className="user-avatar">{initials(label)}</span><div className="user-meta"><strong className="user-name">{label}</strong><small className="user-email">{item.email || item.id}</small></div></div></td><td><span className={`user-role user-role-${roleClass(item.role)}`}>{roleLabel(item.role)}</span></td><td><span className={`user-role user-subscription-${subscriptionClass(item.subscription_plan)}`}>{subscriptionLabel(item.subscription_plan, Boolean(item.subscription_complimentary))}</span></td><td><span className={`user-status ${isActive ? "user-status-active" : "user-status-inactive"}`}>{isActive ? "Activo" : "Inactivo"}</span></td><td><span className="user-date">{formatDate(item.created_at)}</span></td><td><UserActions userId={item.id} role={item.role} subscriptionPlan={item.subscription_plan} isActive={isActive} label={label} isSelf={item.id === user.id} /></td></tr>; })}
           </tbody></table></div>
-          <div className="users-mobile-list">{users.map((item) => { const label = item.display_name || item.email?.split("@")[0] || "Usuario"; const isActive = item.is_active !== false; return <article className="users-mobile-card" key={item.id}><div className="users-mobile-main"><span className="user-avatar">{initials(label)}</span><div className="users-mobile-info"><strong>{label}</strong><small>{item.email || item.id}</small></div><span className="users-mobile-date">{formatDate(item.created_at)}</span></div><div className="users-mobile-tags"><span className={`user-role user-role-${roleClass(item.role)}`}>{roleLabel(item.role)}</span><span className={`user-role user-subscription-${subscriptionClass(item.subscription_plan)}`}>{subscriptionLabel(item.subscription_plan)}</span><span className={`user-status ${isActive ? "user-status-active" : "user-status-inactive"}`}>{isActive ? "Activo" : "Inactivo"}</span></div><div className="users-mobile-actions"><UserActions userId={item.id} role={item.role} subscriptionPlan={item.subscription_plan} isActive={isActive} label={label} isSelf={item.id === user.id} /></div></article>; })}</div>
+          <div className="users-mobile-list">{users.map((item) => { const label = item.display_name || item.email?.split("@")[0] || "Usuario"; const isActive = item.is_active !== false; return <article className="users-mobile-card" key={item.id}><div className="users-mobile-main"><span className="user-avatar">{initials(label)}</span><div className="users-mobile-info"><strong>{label}</strong><small>{item.email || item.id}</small></div><span className="users-mobile-date">{formatDate(item.created_at)}</span></div><div className="users-mobile-tags"><span className={`user-role user-role-${roleClass(item.role)}`}>{roleLabel(item.role)}</span><span className={`user-role user-subscription-${subscriptionClass(item.subscription_plan)}`}>{subscriptionLabel(item.subscription_plan, Boolean(item.subscription_complimentary))}</span><span className={`user-status ${isActive ? "user-status-active" : "user-status-inactive"}`}>{isActive ? "Activo" : "Inactivo"}</span></div><div className="users-mobile-actions"><UserActions userId={item.id} role={item.role} subscriptionPlan={item.subscription_plan} isActive={isActive} label={label} isSelf={item.id === user.id} /></div></article>; })}</div>
         </> : <div className="users-empty"><strong>No hay usuarios registrados</strong><span>Cuando haya cuentas en CoinRenta aparecerán aquí.</span></div>}
       </section>
     </main>
