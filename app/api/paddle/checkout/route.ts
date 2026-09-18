@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 function getPaddle() {
   const apiKey = process.env.PADDLE_API_KEY;
   if (!apiKey) return null;
-  return new Paddle(apiKey, { environment: Environment.sandbox });
+  return new Paddle(apiKey, { environment: process.env.PADDLE_ENVIRONMENT === "sandbox" ? Environment.sandbox : Environment.production });
 }
 
 export async function POST(request: Request) {
