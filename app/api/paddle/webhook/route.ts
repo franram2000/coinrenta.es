@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 function getPaddle() {
   const key = process.env.PADDLE_API_KEY;
   if (!key) return null;
-  return new Paddle(key, { environment: Environment.sandbox });
+  return new Paddle(key, { environment: process.env.PADDLE_ENVIRONMENT === "sandbox" ? Environment.sandbox : Environment.production });
 }
 
 function text(...values: unknown[]) {
