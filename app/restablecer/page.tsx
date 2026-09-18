@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PasswordResetForm from "@/components/password-reset-form";
+import AuthStatusLayout from "@/components/auth-status-layout";
 
 export const metadata: Metadata = {
   title: "Nueva contraseña",
@@ -22,16 +21,32 @@ export default async function ResetPasswordPage() {
   if (!user) notFound();
 
   return (
-    <main className="auth-page">
-      <div className="auth-shell">
-        <div className="auth-brand"><Link href="/"><Image src="/logo.png" alt="CoinRenta" width={44} height={44} priority style={{ width: 44, height: 44, objectFit: "contain" }} /><span className="brand-name">Coin<span>Renta</span></span></Link></div>
-        <section className="auth-card" aria-labelledby="reset-title">
-          <div className="auth-heading"><span className="section-kicker">Seguridad de tu cuenta</span><h1 id="reset-title">Crea una nueva contraseña</h1><p>Elige una contraseña nueva para proteger tu cuenta de CoinRenta.</p></div>
-          <PasswordResetForm />
-          <p className="auth-switch"><Link href="/login">← Volver a iniciar sesión</Link></p>
-        </section>
-        <p className="auth-foot">No compartas tu contraseña ni el enlace de recuperación con nadie.</p>
-      </div>
+    <main className="auth-page auth-status-page auth-reset-page">
+      <div className="auth-glow auth-glow-one" aria-hidden="true" />
+      <div className="auth-glow auth-glow-two" aria-hidden="true" />
+      <section className="auth-layout auth-status-layout" aria-label="Restablecimiento de contraseña">
+        <div className="auth-brand-panel auth-brand-panel-recovery">
+          <div className="auth-brand-copy auth-reset-brand-copy">
+            <span className="auth-eyebrow">Seguridad de tu cuenta</span>
+            <h1>Crea una nueva contraseña.</h1>
+            <p>Elige una contraseña nueva y vuelve a tener tu cuenta protegida.</p>
+          </div>
+        </div>
+        <div className="auth-form-column">
+          <section className="auth-card" aria-labelledby="reset-title">
+            <div className="auth-card-head">
+              <div>
+                <span className="auth-card-kicker">Nueva contraseña</span>
+                <h2 id="reset-title">Protege tu cuenta</h2>
+                <p>Introduce y confirma tu nueva contraseña.</p>
+              </div>
+              <span className="auth-secure" aria-hidden="true">✓</span>
+            </div>
+            <PasswordResetForm />
+          </section>
+          <p className="auth-foot">No compartas tu contraseña ni el enlace de recuperación con nadie.</p>
+        </div>
+      </section>
     </main>
   );
 }
