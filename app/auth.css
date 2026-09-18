@@ -809,6 +809,90 @@
     min-height:100svh;
   }
 }
+@media(max-height:700px){
+  .auth-page{
+    padding-top:7px;
+    padding-bottom:7px;
+  }
+  .auth-layout{
+    gap:10px;
+  }
+  .auth-brand-stage{
+    width:105px;
+    margin-bottom:5px;
+  }
+  .auth-brand-logo{
+    width:48px;
+    height:48px;
+  }
+  .auth-brand-wordmark{
+    font-size:22px;
+  }
+  .auth-brand-status{
+    min-height:20px;
+    padding:3px 7px;
+    font-size:6.5px;
+  }
+  .auth-brand-copy{
+    margin-top:6px;
+  }
+  .auth-brand-copy h1{
+    margin:7px auto 5px;
+    font-size:25px;
+  }
+  .auth-brand-copy p{
+    max-width:410px;
+    font-size:9px;
+    line-height:1.4;
+  }
+  .auth-card{
+    padding:15px;
+    border-radius:17px;
+  }
+  .auth-card-head{
+    margin-bottom:11px;
+  }
+  .auth-card h2{
+    font-size:22px;
+  }
+  .auth-card-head p{
+    font-size:9px;
+  }
+  .auth-secure{
+    width:32px;
+    height:32px;
+    border-radius:10px;
+  }
+  .auth-form{
+    gap:7px;
+  }
+  .auth-form .field{
+    gap:4px;
+  }
+  .auth-form .field > span{
+    font-size:8px;
+  }
+  .auth-form .field input{
+    min-height:38px;
+    padding-inline:11px;
+    font-size:11px;
+  }
+  .auth-submit{
+    min-height:41px;
+  }
+  .form-note{
+    font-size:7.5px;
+  }
+  .auth-switch{
+    margin-top:9px;
+    padding-top:8px;
+    font-size:8px;
+  }
+  .auth-foot{
+    margin-top:5px;
+    font-size:7.5px;
+  }
+}
 @media(prefers-reduced-motion:reduce){
   .auth-page::before,
   .auth-brand-aura,
