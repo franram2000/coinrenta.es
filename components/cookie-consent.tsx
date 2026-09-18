@@ -87,8 +87,8 @@ export default function CookieConsent() {
   }
 
   function manage() { setAnalyticsChoice(consent?.analytics ?? false); setSettingsOpen(true); }
-  function manageCookieSettings() {
-    const target = event?.target as HTMLElement | null;
+  function manageCookieSettings(event: MouseEvent) {
+    const target = event.target as HTMLElement | null;
     if (target?.closest("[data-cookie-settings]")) manage();
   }
 
@@ -98,9 +98,6 @@ export default function CookieConsent() {
 
   return (
     <>
-      {false && hydrated && !firstVisit && !settingsOpen && (
-        <button type="button" className="cr-cookie-manage" onClick={manage} aria-label="Gestionar preferencias de cookies" title="Gestionar preferencias de cookies"><span className="cr-cookie-manage-emoji" aria-hidden="true">🍪</span></button>
-      )}
       {showDialog && firstVisit && <div className="cr-cookie-backdrop" aria-hidden="true" />}
       {showDialog && (
         <div className="cr-cookie-layer" role="dialog" aria-modal="true" aria-labelledby="cr-cookie-title">
@@ -109,7 +106,7 @@ export default function CookieConsent() {
             {firstVisit && <p className="cr-cookie-intro">Utilizamos tecnologías estrictamente necesarias para que CoinRenta funcione y, solo si lo autorizas, Google Analytics para obtener estadísticas de uso. Puedes aceptar, rechazar o configurar las cookies. Consulta la <Link href="/legal/cookies">Política de cookies</Link>.</p>}
             {detailed && <ConsentCategories analyticsChoice={analyticsChoice} setAnalyticsChoice={setAnalyticsChoice} />}
             <div className="cr-cookie-actions"><button type="button" className="cr-cookie-btn cr-cookie-btn-secondary" onClick={() => apply(false)}>Rechazar no necesarias</button>{!detailed && firstVisit && <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => setSettingsOpen(true)}>Configurar</button>}{detailed && <button type="button" className="cr-cookie-btn cr-cookie-btn-ghost" onClick={() => apply(analyticsChoice)}>Guardar preferencias</button>}<button type="button" className="cr-cookie-btn cr-cookie-btn-primary" onClick={() => apply(true)}>Aceptar todas</button></div>
-            <p className="cr-cookie-footnote">Puedes volver a modificar o retirar tu consentimiento en cualquier momento desde el enlace «Configurar cookies» del footer. La preferencia se conserva temporalmente y se volverá a solicitar cuando corresponda.</p>
+            <p className="cr-cookie-footnote">Puedes volver a modificar o retirar tu consentimiento en cualquier momento desde el enlace «Configurar cookies» de esta política. La preferencia se conserva temporalmente y se volverá a solicitar cuando corresponda.</p>
           </div>
         </div>
       )}
