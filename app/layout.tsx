@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./design-system.css";
 import "./landing.css";
 import "./cookies.css";
 import "./error-pages.css";
