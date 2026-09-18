@@ -16,6 +16,26 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
+async function cancelPaddleSubscriptionIfNeeded(paddleSubscriptionId: string | null, subscriptionStatus: string | null) {
+  if (!paddleSubscriptionId || !["active", "trialing", "past_due", "paused"].includes(String(subscriptionStatus || ""))) return;
+  const paddleKey = process.env.PADDLE_API_KEY || "";
+  if (!paddleKey) throw new Error("No se puede eliminar el usuario porque Paddle no está configurado para cancelar su suscripción automáticamente.");
+
+  const environment = process.env.PADDLE_ENVIRONMENT === "sandbox" ? Environment.sandbox : Environment.production;
+  const paddle = new Paddle(paddleKey, { environment });
+  try {
+    const subscription = await paddle.subscriptions.get(paddleSubscriptionId);
+    if (subscription?.scheduledChange) {
+      await paddle.subscriptions.update(paddleSubscriptionId, { scheduledChange: null });
+    }
+    await paddle.subscriptions.cancel(paddleSubscriptionId, { effectiveFrom: "immediately" });
+  } catch (error) {
+    throw new Error(
+      `No se pudo cancelar la suscripción de Paddle. El usuario no se ha eliminado. ${error instanceof Error ? error.message : ""}`.trim()
+    );
+  }
+}
+
 export async function deleteExchangeConnection(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -165,14 +185,106 @@ export async function adminUpdateUser(formData: FormData) {
 }
 
 export async function adminDeleteUser(formData: FormData) {
-  const { supabase, user } = await requireAdmin(); const targetId = String(formData.get("user_id") || "").trim();
-  if (!targetId) throw new Error("Usuario no encontrado"); if (targetId === user.id) throw new Error("No puedes eliminar tu propia cuenta de administrador.");
-  const { data: target, error: targetError } = await supabase.from("profiles").select("id,role,is_active").eq("id", targetId).maybeSingle();
-  if (targetError) throw new Error(targetError.message); if (!target) throw new Error("El usuario no existe.");
+  const { supabase, user } = await requireAdmin();
+  const targetId = String(formData.get("user_id") || "").trim();
+
+  if (!targetId) throw new Error("Usuario no encontrado.");
+  if (targetId === user.id) throw new Error("No puedes eliminar tu propia cuenta de administrador.");
+
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("id,role,is_active,paddle_subscription_id,subscription_status")
+    .eq("id", targetId)
+    .maybeSingle();
+  if (targetError) throw new Error(targetError.message);
+  if (!target) throw new Error("El usuario no existe.");
+
   if (target.role === "admin" && target.is_active !== false) {
-    const { count, error: countError } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin").eq("is_active", true);
-    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`); if ((count ?? 0) <= 1) throw new Error("No puedes eliminar al único administrador activo.");
+    const { count, error: countError } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin")
+      .eq("is_active", true);
+    if (countError) throw new Error(`No se pudo comprobar los administradores: ${countError.message}`);
+    if ((count ?? 0) <= 1) throw new Error("No puedes eliminar al único administrador activo.");
   }
-  const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", targetId); if (error) throw new Error(`No se pudo desactivar el usuario: ${error.message}`);
-  revalidatePath("/dashboard/usuarios"); revalidatePath("/dashboard");
+
+  await cancelPaddleSubscriptionIfNeeded(
+    target.paddle_subscription_id || null,
+    target.subscription_status || null,
+  );
+
+  const admin = createAdminClient();
+  const { data: connections, error: connectionsError } = await admin
+    .from("exchange_connections")
+    .select("id,api_secret_id")
+    .eq("user_id", targetId);
+  if (connectionsError) throw new Error(`No se pudieron cargar las conexiones del usuario: ${connectionsError.message}`);
+
+  for (const connection of connections || []) {
+    if (connection.api_secret_id) {
+      const { error } = await admin.rpc("delete_exchange_secret_for_admin", {
+        p_connection_id: connection.id,
+        p_user_id: targetId,
+      });
+      if (error) throw new Error(`No se pudo eliminar una credencial API: ${error.message}`);
+    }
+  }
+
+  const { data: accounts, error: accountsError } = await admin
+    .from("accounts")
+    .select("id")
+    .eq("user_id", targetId);
+  if (accountsError) throw new Error(`No se pudieron cargar las cuentas del usuario: ${accountsError.message}`);
+
+  const accountIds = (accounts || []).map((account: { id: string }) => account.id);
+
+  if (accountIds.length) {
+    for (const table of ["tax_disposals", "tax_lots", "transaction_legs"]) {
+      const { error } = await admin.from(table).delete().in(
+        table === "transaction_legs" ? "transaction_id" : "id",
+        table === "transaction_legs"
+          ? ((await admin.from("transactions").select("id").eq("user_id", targetId)).data || []).map((row: { id: string }) => row.id)
+          : []
+      );
+      if (error && !String(error.message).toLowerCase().includes("does not exist")) {
+        throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+      }
+    }
+
+    for (const table of ["balance_snapshots", "transactions", "imports"]) {
+      const { error } = await admin
+        .from(table)
+        .delete()
+        .eq("user_id", targetId)
+        .in("account_id", accountIds);
+      if (error) throw new Error(`No se pudo eliminar ${table}: ${error.message}`);
+    }
+
+    const { error: accountDeleteError } = await admin
+      .from("accounts")
+      .delete()
+      .eq("user_id", targetId)
+      .in("id", accountIds);
+    if (accountDeleteError) throw new Error(`No se pudieron eliminar las cuentas: ${accountDeleteError.message}`);
+  }
+
+  const { error: connectionDeleteError } = await admin
+    .from("exchange_connections")
+    .delete()
+    .eq("user_id", targetId);
+  if (connectionDeleteError) throw new Error(`No se pudieron eliminar las conexiones: ${connectionDeleteError.message}`);
+
+  const { error: profileDeleteError } = await admin
+    .from("profiles")
+    .delete()
+    .eq("id", targetId);
+  if (profileDeleteError) throw new Error(`No se pudo eliminar el perfil: ${profileDeleteError.message}`);
+
+  const { error: deleteUserError } = await admin.auth.admin.deleteUser(targetId, false);
+  if (deleteUserError) throw new Error(`No se pudo eliminar la cuenta de autenticación: ${deleteUserError.message}`);
+
+  revalidatePath("/dashboard/usuarios");
+  revalidatePath("/dashboard");
 }
+
