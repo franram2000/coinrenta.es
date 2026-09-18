@@ -521,3 +521,62 @@
     transform:none;
   }
 }
+@media(max-width:760px){
+  /* The drawer is a vertical sidebar; do not let the bottom-nav rules center its links. */
+  .dashboard-pro-shell .mobile-menu-panel{
+    left:0;
+    right:auto;
+    top:0;
+    bottom:0;
+    width:min(330px,88vw);
+    max-width:88vw;
+    height:100dvh;
+    box-sizing:border-box;
+    justify-content:flex-start;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-nav{
+    display:grid;
+    width:100%;
+    gap:5px;
+    align-content:start;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-nav .app-nav-item{
+    width:100%;
+    min-width:0;
+    min-height:50px;
+    height:50px;
+    flex:0 0 auto;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-start;
+    gap:13px;
+    padding:0 14px;
+    border-radius:11px;
+    font-size:15px;
+    line-height:1.2;
+    white-space:nowrap;
+    text-align:left;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-nav .app-nav-item span{
+    width:22px;
+    flex:0 0 22px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    font-size:18px;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-head{
+    width:100%;
+    box-sizing:border-box;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-label{
+    align-self:stretch;
+  }
+  .dashboard-pro-shell .mobile-menu-panel .mobile-menu-logout{
+    width:100%;
+    box-sizing:border-box;
+  }
+}
+
