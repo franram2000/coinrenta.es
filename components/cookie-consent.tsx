@@ -72,8 +72,10 @@ export default function CookieConsent() {
       setReady(true);
       try { window.sessionStorage.removeItem(PENDING_ENTRY_KEY); } catch {}
     };
+    const onCookieSettings = () => manageCookieSettings();
+    document.addEventListener("click", onCookieSettings);
     window.addEventListener("coinrenta-entry-ready", onEntryReady);
-    return () => window.removeEventListener("coinrenta-entry-ready", onEntryReady);
+    return () => { document.removeEventListener("click", onCookieSettings); window.removeEventListener("coinrenta-entry-ready", onEntryReady); };
   }, []);
 
   function apply(analytics: boolean) {
@@ -85,6 +87,10 @@ export default function CookieConsent() {
   }
 
   function manage() { setAnalyticsChoice(consent?.analytics ?? false); setSettingsOpen(true); }
+  function manageCookieSettings() {
+    const target = event?.target as HTMLElement | null;
+    if (target?.closest("[data-cookie-settings]")) manage();
+  }
 
   const firstVisit = hydrated && !consent;
   const showDialog = ready && (firstVisit || settingsOpen);
