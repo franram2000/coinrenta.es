@@ -60,13 +60,17 @@ export async function GET(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role,subscription_plan,subscription_status')
+    .select('role,subscription_plan,subscription_status,subscription_complimentary')
     .eq('id', user.id)
     .maybeSingle();
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
   const canUseApi = profile?.role === 'admin'
-    || profile?.role === 'pro'
-    || (profile?.subscription_plan === 'pro' && ['active', 'trialing', 'past_due'].includes(String(profile?.subscription_status || '')));
+    || (profile?.subscription_plan === 'pro' && (
+      profile?.subscription_status === 'active'
+      || profile?.subscription_status === 'trialing'
+      || profile?.subscription_status === 'past_due'
+      || profile?.subscription_complimentary
+    ));
 
   const url = new URL(request.url);
   const connectionId = String(url.searchParams.get('connection_id') || '').trim();
