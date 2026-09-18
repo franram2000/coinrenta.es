@@ -580,66 +580,75 @@
   }
 }
 @media(max-width:820px){
-  .auth-page{padding:24px 18px}
+  .auth-page{padding:20px 16px}
   .auth-layout{
     grid-template-columns:1fr;
     max-width:540px;
-    gap:28px;
+    gap:16px;
   }
-  .auth-brand-panel{padding:0}
+  .auth-brand-panel{
+    padding:0;
+  }
+  /* On mobile the brand remains visible, while the marketing copy yields space to the form. */
   .auth-brand-stage{
-    width:min(260px,62vw);
-    margin-bottom:17px;
+    width:118px;
+    margin-bottom:9px;
   }
   .auth-brand-logo{
-    width:98px;
-    height:98px;
+    width:58px;
+    height:58px;
   }
-  .auth-brand-copy{margin-top:16px}
-  .auth-brand-copy h1{
-    font-size:clamp(37px,8vw,52px);
+  .auth-brand-copy,
+  .auth-trust-row,
+  .auth-brand-note{
+    display:none;
   }
-  .auth-brand-copy p{font-size:13px}
-  .auth-trust-row{margin-top:18px}
-  .auth-brand-note{display:none}
+  .auth-brand-identity{
+    gap:6px;
+  }
+  .auth-brand-status{
+    min-height:22px;
+    padding:4px 8px;
+    font-size:7px;
+  }
+  .auth-brand-wordmark{
+    font-size:25px;
+  }
 }
 @media(max-width:540px){
-  .auth-page{padding:16px 11px}
-  .auth-page::after{background-size:58px 58px;opacity:.25}
-  .auth-layout{gap:18px}
+  .auth-page{
+    height:100dvh;
+    padding:10px 11px;
+  }
+  .auth-page::after{background-size:58px 58px;opacity:.2}
+  .auth-layout{gap:10px}
   .auth-brand-stage{
-    width:min(215px,58vw);
-    margin-bottom:12px;
+    width:86px;
+    margin-bottom:6px;
   }
   .auth-brand-logo{
-    width:80px;
-    height:80px;
+    width:48px;
+    height:48px;
   }
-  .auth-brand-wordmark{font-size:28px}
-  .auth-brand-status{font-size:8px}
-  .auth-brand-copy{
-    margin-top:14px;
+  .auth-brand-wordmark{font-size:22px}
+  .auth-brand-status{
+    min-height:19px;
+    padding:3px 7px;
+    font-size:6.5px;
   }
-  .auth-brand-copy h1{
-    margin-top:14px;
-    font-size:35px;
-  }
-  .auth-brand-copy p{font-size:12px;line-height:1.62}
-  .auth-trust-row{
-    gap:5px 11px;
-    margin-top:15px;
-  }
-  .auth-trust-row span{font-size:9px}
   .auth-card{
     padding:21px;
     border-radius:20px;
   }
-  .auth-card-head{margin-bottom:21px}
-  .auth-card h2{font-size:27px}
-  .auth-secure{width:36px;height:36px}
+  .auth-card-head{margin-bottom:18px}
+  .auth-card h2{font-size:26px}
+  .auth-secure{width:35px;height:35px}
   .auth-form .field input{min-height:48px}
   .auth-submit{min-height:49px}
-  .auth-foot{margin-top:10px}
+  .auth-foot{
+    margin-top:7px;
+    font-size:8px;
+  }
   .auth-shell{
     width:min(100%,470px);
   }
