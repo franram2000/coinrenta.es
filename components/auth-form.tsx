@@ -28,13 +28,11 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         const { data, error: signupError } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { display_name: displayName.trim() || null }, emailRedirectTo: `${SITE_URL}/verificar-correo` } });
         if (signupError) setError(signupError.message || "No hemos podido crear la cuenta.");
         else if (data.session) {
-          try { window.sessionStorage.setItem("coinrenta_pending_entry", "1"); } catch {}
           window.location.assign("/dashboard?intro=1"); return;
         } else setMessage("Cuenta creada. Revisa tu correo para confirmar la dirección antes de entrar.");
       } else {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (loginError) { setError("Correo o contraseña incorrectos."); return; }
-        try { window.sessionStorage.setItem("coinrenta_pending_entry", "1"); } catch {}
         window.location.assign("/dashboard?intro=1"); return;
       }
     } catch { setError(isRegister ? "No hemos podido crear la cuenta. Comprueba tu conexión e inténtalo de nuevo." : "No hemos podido iniciar sesión. Comprueba tu conexión e inténtalo de nuevo."); }
